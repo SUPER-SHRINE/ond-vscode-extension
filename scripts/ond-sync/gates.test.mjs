@@ -19,7 +19,7 @@ const reviewsPath=`${extension}/pulls/13/reviews?per_page=100&page=1`;
 function fixture(kind){
   const {lock,evidence:releaseEvidence}=candidate(),{policy,digest:policySha256}=testPolicy(),routes={},packages=[];
   const set=(repository,path,json)=>routes[repository+path]=[{json}],binary=(repository,path,bytes)=>routes[repository+path]=[{binary:bytes.toString('base64')}];
-  set(extension,'',{id:1403086732,full_name:'SUPER-SHRINE/ond-vscode-extension',private:true});
+  set(extension,'',{id:1404564933,full_name:'SUPER-SHRINE/ond-vscode-extension',private:true});
   for(const t of lock.targets){
     const archive=Buffer.from(releaseEvidence.find(e=>e.name===t.archive.name).content,'base64');
     const server=extractBinary(archive,t.binary.name,t.target==='linux-x86_64'?'tar.gz':'zip');
@@ -28,7 +28,7 @@ function fixture(kind){
     const evidence={schemaVersion:1,extensionCommit,headCommit:head,baseCommit:kind==='merge'?base:head,extensionVersion:tag,target:t.target,vsixSha256:sha256(bytes),lockSha256:sha256(canonical(lock)),binarySha256:t.binary.sha256,policySha256,vscodeVersion:policy.vscodeVersion,vscodeArchiveSha256:'f'.repeat(64),hostRuns:['1','2'].map(run=>({run,success:true,trusted:true,vscode:policy.vscodeVersion,tests:names.map(name=>({name,value:name==='installed_lsp_sha256'?t.binary.sha256:true}))}))};
     packages.push({name:`ond-vscode-extension-${tag}-${t.target}.vsix`,bytes,evidence});
   }
-  const pr={state:'open',base:{ref:'develop',sha:base,repo:{id:1403086732}},head:{sha:head,repo:{id:1403086732}},mergeable:true,mergeable_state:'clean',merge_commit_sha:merge};
+  const pr={state:'open',base:{ref:'develop',sha:base,repo:{id:1404564933}},head:{sha:head,repo:{id:1404564933}},mergeable:true,mergeable_state:'clean',merge_commit_sha:merge};
   if(kind==='merge'){
     set(extension,'/pulls/13',pr);set(extension,'/git/ref/heads/develop',{object:{sha:base}});
     set(extension,'/pulls/13/reviews?per_page=100&page=1',[review()]);

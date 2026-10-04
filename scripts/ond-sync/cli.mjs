@@ -18,7 +18,7 @@ const ond=new GitHub(REPOSITORY,process.env.OND_RELEASE_TOKEN),extension=new Git
 if(command==='check'){const lock=parseLock(readFileSync(options['--lock']||join(ROOT,LOCK_PATH)));console.log(`Release lock valid: ${lock.version}`);}
 if(command==='resolve'){
   const baseSHA=required('--base-sha');commit(baseSHA);
-  const repository=await extension.call('');assert.equal(repository.id,1403086732);assert.equal(repository.full_name,'SUPER-SHRINE/ond-vscode-extension');
+  const repository=await extension.call('');assert.equal(repository.id,1404564933);assert.equal(repository.full_name,'SUPER-SHRINE/ond-vscode-extension');
   const ref=await extension.call('/git/ref/heads/develop');assert.equal(ref.object.sha,baseSHA,'STALE_BASE');
   const baseCommit=await extension.call(`/git/commits/${baseSHA}`),tree=await extension.call(`/git/trees/${baseCommit.tree.sha}?recursive=1`);assert.equal(tree.truncated,false,'Truncated tree');
   const baseTree=tree.tree.filter(e=>e.type!=='tree').map(e=>({path:e.path,mode:e.mode,oid:e.sha})),baseFiles={};

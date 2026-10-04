@@ -95,7 +95,7 @@ jobs:
           assert.match(process.env.RUN_ID||'',/^[1-9][0-9]*$/);
           const api=new GitHub('SUPER-SHRINE/ond-vscode-extension',process.env.GH_TOKEN);
           const run=await api.call(`/actions/runs/${process.env.RUN_ID}`);
-          assert.equal(run.repository.id,1403086732);assert.equal(run.path,'.github/workflows/ond-sync.yml');
+          assert.equal(run.repository.id,1404564933);assert.equal(run.path,'.github/workflows/ond-sync.yml');
           assert.equal(run.event,'workflow_dispatch');assert.equal(run.head_branch,'main');assert.equal(run.status,'completed');assert.equal(run.conclusion,'success');
           JS
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
