@@ -33,7 +33,7 @@ jobs:
       # secretを持つjobはレビュー済みの固定tool commitだけを実行する。PRのnpm/scriptsは実行しない。
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: 94fd77fa33f49da736e193a0c78f5a5b91e6c856
+          ref: 7daf251528e3f97cbab147f92de2b44b43f51934
           persist-credentials: false
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
