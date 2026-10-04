@@ -121,6 +121,41 @@ test('locked acquisition removes the stale opposite binary and rejects extra ser
     const opposite=platform.target==='linux-x86_64'?'windows-x86_64':'linux-x86_64';cleanOppositeBinary(output,opposite);assert(!existsSync(join(output,platform.binary)));
   } finally {rmSync(dir,{recursive:true,force:true});}
 });
+test('online acquisition checks repository identities before release resolution without TDZ shadowing',()=>{
+  const run=extensionID=>{
+    const dir=mkdtempSync(join(tmpdir(),'ond-online-acquire-')),routesFile=join(dir,'routes.json'),requestsFile=join(dir,'requests.jsonl'),output=join(dir,'output'),lock=join(ROOT,LOCK_PATH);
+    const extensionAPI='https://api.github.com/repos/SUPER-SHRINE/ond-vscode-extension',ondAPI='https://api.github.com/repos/SUPER-SHRINE/ond';
+    const routes={
+      [ondAPI]:[{json:{id:1401374287,full_name:'SUPER-SHRINE/ond',private:true}}],
+      [extensionAPI]:[{json:{id:extensionID,full_name:'SUPER-SHRINE/ond-vscode-extension',private:true}}],
+      [`${ondAPI}/releases/tags/0.1.2`]:[{status:404,json:{message:'fixture release unavailable'}}]
+    };
+    writeFileSync(routesFile,JSON.stringify(routes));writeFileSync(requestsFile,'');
+    try {
+      const result=spawnSync(process.execPath,['--import',new URL('./fixtures/gate-fetch.mjs',import.meta.url).href,join(ROOT,'scripts/ond-sync/cli.mjs'),'acquire','--lock',lock,'--out',output],{encoding:'utf8',env:{...process.env,GH_TOKEN:'',GITHUB_TOKEN:'',OND_RELEASE_TOKEN:'',OND_GATE_ROUTES:routesFile,OND_GATE_REQUESTS:requestsFile}});
+      assert.ifError(result.error);
+      const requests=readFileSync(requestsFile,'utf8').trim().split('\n').filter(Boolean).map(line=>JSON.parse(line).address);
+      return {dir,output,result,requests,releaseURL:`${ondAPI}/releases/tags/0.1.2`};
+    } catch(error) {rmSync(dir,{recursive:true,force:true});throw error;}
+  };
+  const valid=run(1404564933);
+  try {
+    assert.notEqual(valid.result.status,0);
+    assert.match(valid.result.stderr,/GitHub GET failed \(404\)/);
+    assert.doesNotMatch(valid.result.stderr,/ReferenceError|Cannot access 'extension'/);
+    assert.equal(valid.requests.filter(url=>url==='https://api.github.com/repos/SUPER-SHRINE/ond').length,2);
+    assert(valid.requests.includes('https://api.github.com/repos/SUPER-SHRINE/ond-vscode-extension'));
+    assert(valid.requests.includes(valid.releaseURL));
+    assert(!existsSync(join(valid.output,getPlatform().binary)),'A rejected release must not write an executable');
+  } finally {rmSync(valid.dir,{recursive:true,force:true});}
+  const wrong=run(1404564999);
+  try {
+    assert.notEqual(wrong.result.status,0);
+    assert.match(wrong.result.stderr,/AssertionError/);
+    assert(!wrong.requests.includes(wrong.releaseURL),'Wrong repository identity must stop before release access');
+    assert(!existsSync(join(wrong.output,getPlatform().binary)),'A wrong repository must not write an executable');
+  } finally {rmSync(wrong.dir,{recursive:true,force:true});}
+});
 test('same-head PR retargeting stops retries and final validation without replacement PR creation',async()=>{
   for(const timing of ['before-retry','during-release','after-create']) {
     const i=input(),{r,state,p}=remote(i);await apply(i,p,r,async()=>{});const createdCount=state.creates;
