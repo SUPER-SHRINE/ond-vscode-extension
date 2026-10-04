@@ -1,0 +1,18 @@
+import assert from 'node:assert/strict';
+import { canonical,sha256,keys,hash,commit } from './contract.mjs';
+import { zipEntries,OND_NOTICE_FILES,requiresNotices } from './archive.mjs';
+import { verifyServer,checkServerEntries } from './server.mjs';
+export function verifyCandidate({lock,target,version,extensionCommit,headCommit=extensionCommit,baseCommit=extensionCommit,policy,policySha256,vsix,evidence}) {
+  keys(evidence,['schemaVersion','extensionCommit','headCommit','baseCommit','extensionVersion','target','vsixSha256','lockSha256','binarySha256','policySha256','vscodeVersion','vscodeArchiveSha256','hostRuns']);
+  assert.equal(evidence.schemaVersion,1);assert.equal(evidence.extensionCommit,extensionCommit);commit(extensionCommit);commit(headCommit);commit(baseCommit);assert.equal(evidence.headCommit,headCommit);assert.equal(evidence.baseCommit,baseCommit);assert.equal(evidence.extensionVersion,version);assert.equal(evidence.target,target);assert.equal(evidence.lockSha256,sha256(canonical(lock)));assert.equal(evidence.vsixSha256,sha256(vsix));assert.equal(evidence.policySha256,policySha256);assert.equal(evidence.vscodeVersion,policy.vscodeVersion);hash(evidence.vscodeArchiveSha256);
+  assert.equal(evidence.hostRuns.length,policy.hostRuns);assert.deepEqual(evidence.hostRuns.map(r=>r.run),['1','2']);
+  for(const r of evidence.hostRuns){assert.equal(r.success,true);assert.equal(r.trusted,true);assert.equal(r.vscode,policy.vscodeVersion);assert(Array.isArray(r.tests));assert.deepEqual(r.tests.map(t=>t.name),['installed_lsp_sha256','installed_vsix','activation','document_symbols','healthy_file_errors','completion_sumTo','hover','type_error','type_error_cleared','syntax_error','syntax_error_cleared'],'Incomplete host suite');assert(r.tests.some(t=>t.name==='installed_lsp_sha256'&&t.value===evidence.binarySha256),'Installed binary evidence missing');}
+  const files=zipEntries(vsix);checkServerEntries([...files.keys()].filter(p=>p.startsWith('extension/server/')&&p!=='extension/server/').map(p=>p.slice('extension/server/'.length)),target,lock.version);const xml=files.get('extension.vsixmanifest').toString('utf8');assert(xml.includes(`TargetPlatform="${target==='linux-x86_64'?'linux-x64':'win32-x64'}"`),'VSIX target mismatch');const metadata=JSON.parse(files.get('extension/server/ond-lsp.json').toString('utf8'));
+  const t=lock.targets.find(t=>t.target===target);assert(t);const notices=requiresNotices(lock.version)?Object.fromEntries(OND_NOTICE_FILES.map(name=>[name,files.get(`extension/server/${name}`)])):undefined;verifyServer(lock,target,metadata,files.get(`extension/server/${t.binary.name}`),notices);assert.equal(evidence.binarySha256,t.binary.sha256);
+  const manifest=JSON.parse(files.get('extension/package.json').toString('utf8'));assert.equal(manifest.version,version);assert.equal(manifest.publisher,'super-shrine');assert.equal(manifest.name,'ond-vscode-ext');
+  assert.equal(files.get('extension/config/ond-release.lock.json').toString('utf8'),canonical(lock));return sha256(vsix);
+}
+export async function reconcileAssets(desired,read) {
+  const states=[];for(const file of desired){const remote=await read(file.name);if(remote!==null){assert.equal(sha256(remote),sha256(file.bytes),'Existing publication differs; replacement forbidden');states.push({name:file.name,sha256:sha256(file.bytes),state:'SAME_HASH_SKIP'});}else states.push({name:file.name,sha256:sha256(file.bytes),state:'MISSING'});}
+  return {state:states.every(s=>s.state==='SAME_HASH_SKIP')?'PUBLISHED_TARGETS_ALL':states.some(s=>s.state==='SAME_HASH_SKIP')?'PARTIALLY_PUBLISHED':'UNPUBLISHED',assets:states};
+}

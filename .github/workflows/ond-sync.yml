@@ -1,0 +1,122 @@
+name: 固定Ond同期
+on:
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: resolveで証拠生成、digest確認後applyでdraft PR
+        type: choice
+        options: [resolve, apply]
+        default: resolve
+        required: true
+      ond_tag:
+        description: 明示Ond release tag（latest禁止）
+        type: string
+      base_sha:
+        description: 承認したdevelop commit SHA
+        type: string
+      snapshot_run_id:
+        description: apply対象resolve run ID
+        type: string
+      input_sha:
+        description: 承認したsnapshot file SHA-256
+        type: string
+      plan_id:
+        description: 承認したplan ID
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: ond-sync-develop
+  cancel-in-progress: false
+jobs:
+  resolve:
+    if: inputs.operation == 'resolve'
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+      - if: vars.OND_RELEASE_PUBLIC != 'true'
+        id: ond-token
+        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2
+        with:
+          app-id: 5174333
+          private-key: ${{ secrets.SUPER_SHRINE_WORKER_PRIVATE_KEY }}
+          owner: SUPER-SHRINE
+          repositories: ond
+          permission-contents: read
+      - name: 明示入力をresolve
+        env:
+          OND_RELEASE_TOKEN: ${{ steps.ond-token.outputs.token }}
+          GITHUB_TOKEN: ${{ github.token }}
+          OND_TAG: ${{ inputs.ond_tag }}
+          BASE_SHA: ${{ inputs.base_sha }}
+        run: node scripts/ond-sync/cli.mjs resolve --tag "$OND_TAG" --base-sha "$BASE_SHA" --out snapshot.json
+      - name: 独立2processで同じplanを生成
+        run: |
+          node scripts/ond-sync/cli.mjs plan --input snapshot.json --out plan.json
+          node scripts/ond-sync/cli.mjs plan --input snapshot.json --out plan-second.json
+          cmp plan.json plan-second.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ond-sync-input
+          path: |
+            snapshot.json
+            plan.json
+          if-no-files-found: error
+          retention-days: 7
+  apply:
+    if: inputs.operation == 'apply'
+    runs-on: ubuntu-22.04
+    permissions:
+      actions: read
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: main
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+      - name: resolve runのprovenanceを照合
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ inputs.snapshot_run_id }}
+        run: |
+          node --input-type=module - <<'JS'
+          import assert from 'node:assert/strict';
+          import { GitHub } from './scripts/ond-sync/github.mjs';
+          assert.match(process.env.RUN_ID||'',/^[1-9][0-9]*$/);
+          const api=new GitHub('SUPER-SHRINE/ond-vscode-extension',process.env.GH_TOKEN);
+          const run=await api.call(`/actions/runs/${process.env.RUN_ID}`);
+          assert.equal(run.repository.id,1403086732);assert.equal(run.path,'.github/workflows/ond-sync.yml');
+          assert.equal(run.event,'workflow_dispatch');assert.equal(run.head_branch,'main');assert.equal(run.status,'completed');assert.equal(run.conclusion,'success');
+          JS
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: ond-sync-input
+          run-id: ${{ inputs.snapshot_run_id }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/ond-sync-snapshot
+      - if: vars.OND_RELEASE_PUBLIC != 'true'
+        id: ond-token
+        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2
+        with:
+          app-id: 5174333
+          private-key: ${{ secrets.SUPER_SHRINE_WORKER_PRIVATE_KEY }}
+          owner: SUPER-SHRINE
+          repositories: ond
+          permission-contents: read
+      - name: 承認digest・外部状態を再照合してdraft PRを作成
+        env:
+          OND_RELEASE_TOKEN: ${{ steps.ond-token.outputs.token }}
+          GITHUB_TOKEN: ${{ github.token }}
+          INPUT_SHA: ${{ inputs.input_sha }}
+          PLAN_ID: ${{ inputs.plan_id }}
+        run: node scripts/ond-sync/cli.mjs apply --input "$RUNNER_TEMP/ond-sync-snapshot/snapshot.json" --plan "$RUNNER_TEMP/ond-sync-snapshot/plan.json" --input-sha "$INPUT_SHA" --plan-id "$PLAN_ID"

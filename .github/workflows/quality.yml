@@ -1,0 +1,127 @@
+name: 品質検査
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [develop]
+permissions:
+  contents: read
+concurrency:
+  group: extension-quality-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  checks:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+  acquire:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-22.04]
+    runs-on: ${{ matrix.os }}
+    steps:
+      # secretを持つjobはレビュー済みの固定tool commitだけを実行する。PRのnpm/scriptsは実行しない。
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: 94fd77fa33f49da736e193a0c78f5a5b91e6c856
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+      - name: 対象commitのlockだけを取得
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          $ErrorActionPreference='Stop'
+          if($env:INPUT_SHA -notmatch '^[0-9a-f]{40}$'){throw 'Invalid input commit'}
+          $content = gh api "repos/$env:GITHUB_REPOSITORY/contents/config/ond-release.lock.json?ref=$env:INPUT_SHA" --jq .content
+          if($LASTEXITCODE -ne 0){throw 'Cannot read adopted lock'}
+          [IO.File]::WriteAllBytes('candidate.lock.json',[Convert]::FromBase64String(($content -join '')))
+          node scripts/ond-sync/cli.mjs check --lock candidate.lock.json
+          if($LASTEXITCODE -ne 0){throw 'Invalid adopted lock'}
+      - name: Ond読取tokenを発行
+        if: vars.OND_RELEASE_PUBLIC != 'true'
+        id: ond-token
+        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349 # v2
+        with:
+          app-id: 5174333
+          private-key: ${{ secrets.SUPER_SHRINE_WORKER_PRIVATE_KEY }}
+          owner: SUPER-SHRINE
+          repositories: ond
+          permission-contents: read
+      - name: Release binaryだけを検証取得
+        env:
+          OND_RELEASE_TOKEN: ${{ steps.ond-token.outputs.token }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/ond-sync/cli.mjs acquire --lock candidate.lock.json --out release-input
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: locked-server-${{ runner.os }}
+          path: release-input/*
+          if-no-files-found: error
+          retention-days: 1
+  host:
+    name: 品質・実VS Code (${{ matrix.os }})
+    needs: [checks, acquire]
+    if: always()
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-22.04]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    env:
+      OND_EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+      OND_EXPECTED_BASE_SHA: ${{ github.event.pull_request.base.sha || github.sha }}
+    steps:
+      - name: 未検証・fork・取得失敗を合格扱いしない
+        env:
+          CHECKS: ${{ needs.checks.result }}
+          ACQUIRE: ${{ needs.acquire.result }}
+        shell: pwsh
+        run: |
+          if($env:CHECKS -ne 'success' -or $env:ACQUIRE -ne 'success'){throw 'BLOCKED: required release evidence unavailable'}
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: locked-server-${{ runner.os }}
+          path: server
+      - if: runner.os == 'Linux'
+        run: chmod 755 server/ond-lsp
+      - run: npm run package:vsix
+      - if: runner.os == 'Linux'
+        run: xvfb-run -a --server-args="-screen 0 1280x900x24" npm run test:integration
+      - if: runner.os == 'Windows'
+        run: npm run test:integration
+      - name: 検証証拠を保存（source/cacheは保存しない）
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: vscode-integration-${{ runner.os }}
+          path: |
+            .integration/results/*/*.json
+            .integration/results/*/*.log
+            *.vsix
+            *.vsix.sha256
+            *.vsix.verified.json
+          if-no-files-found: warn
+          retention-days: 7

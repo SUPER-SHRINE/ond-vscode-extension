@@ -1,0 +1,3 @@
+# Canonical JSON と hash 入力の checkout bytes を OS に依存させない。
+# Binary は Git の自動判定を維持する。
+* text=auto eol=lf

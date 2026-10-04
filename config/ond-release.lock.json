@@ -1,0 +1,58 @@
+{
+  "commit": "2777310f98f5e7be7cc5e3e554d2b99bbd61dcb8",
+  "contract": "manifest-v1",
+  "manifest": {
+    "id": 609696708,
+    "name": "ond-0.1.2-manifest.json",
+    "sha256": "0311c23a58d171da3c0349cf701af4a8f8fd4926bf813275ae6e923b3d7effcc",
+    "size": 761
+  },
+  "releaseId": 402981378,
+  "repository": "SUPER-SHRINE/ond",
+  "repositoryId": 1401374287,
+  "schemaVersion": 1,
+  "tag": "0.1.2",
+  "targets": [
+    {
+      "archive": {
+        "id": 609696553,
+        "name": "ond-0.1.2-linux-x86_64.tar.gz",
+        "sha256": "e2a40ad4dc72e3a7b02f83f6900a53d799128aa8ef593c82c69b0e3ada5b7f77",
+        "size": 3610969
+      },
+      "binary": {
+        "name": "ond-lsp",
+        "sha256": "2bde6d2578932398b3cf8095725673ddb53f5adafd467f31fbf33a77ceadc971"
+      },
+      "checksum": {
+        "id": 609696599,
+        "name": "ond-0.1.2-linux-x86_64.tar.gz.sha256",
+        "sha256": "aed9afc43d5a45989c071189e7ba09cb2356fb70c9849b674d4977ba5789620f",
+        "size": 96
+      },
+      "rustTarget": "x86_64-unknown-linux-gnu",
+      "target": "linux-x86_64"
+    },
+    {
+      "archive": {
+        "id": 609696628,
+        "name": "ond-0.1.2-windows-x86_64.zip",
+        "sha256": "4cb9f8f62608e4181c5955ab6094f642229629e51c1f547df4bcca255545880c",
+        "size": 3268370
+      },
+      "binary": {
+        "name": "ond-lsp.exe",
+        "sha256": "52236b658d468493df2a06e214c7bb99f704a97b775f8875fac38078a675af1e"
+      },
+      "checksum": {
+        "id": 609696669,
+        "name": "ond-0.1.2-windows-x86_64.zip.sha256",
+        "sha256": "9858300abc48e43e943be2845cb929425f5248b994791ece75c887c28e6eb93c",
+        "size": 96
+      },
+      "rustTarget": "x86_64-pc-windows-msvc",
+      "target": "windows-x86_64"
+    }
+  ],
+  "version": "0.1.2"
+}

@@ -1,0 +1,27 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "build: ond-lsp",
+      "type": "npm",
+      "script": "build:server",
+      "problemMatcher": []
+    },
+    {
+      "label": "npm: build",
+      "type": "npm",
+      "script": "build",
+      "group": "build",
+      "problemMatcher": []
+    },
+    {
+      "label": "build: all",
+      "dependsOrder": "sequence",
+      "dependsOn": [
+        "build: ond-lsp",
+        "npm: build"
+      ],
+      "problemMatcher": []
+    }
+  ]
+}

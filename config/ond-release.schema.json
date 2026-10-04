@@ -1,0 +1,183 @@
+{
+  "$defs": {
+    "asset": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "maximum": 9007199254740991,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "name": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "sha256": {
+          "$ref": "#/$defs/hash"
+        },
+        "size": {
+          "maximum": 104857600,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "size",
+        "sha256"
+      ],
+      "type": "object"
+    },
+    "hash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "version": {
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+      "type": "string"
+    }
+  },
+  "$id": "https://github.com/SUPER-SHRINE/ond-vscode-extension/config/ond-release.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "else": {
+        "properties": {
+          "manifest": {
+            "$ref": "#/$defs/asset"
+          }
+        }
+      },
+      "if": {
+        "properties": {
+          "contract": {
+            "const": "legacy-v1"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "manifest": {
+            "type": "null"
+          },
+          "version": {
+            "const": "0.1.1"
+          }
+        }
+      }
+    }
+  ],
+  "properties": {
+    "commit": {
+      "pattern": "^[0-9a-f]{40}$",
+      "type": "string"
+    },
+    "contract": {
+      "enum": [
+        "legacy-v1",
+        "manifest-v1"
+      ]
+    },
+    "manifest": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "$ref": "#/$defs/asset"
+        }
+      ]
+    },
+    "releaseId": {
+      "maximum": 9007199254740991,
+      "minimum": 1,
+      "type": "integer"
+    },
+    "repository": {
+      "const": "SUPER-SHRINE/ond"
+    },
+    "repositoryId": {
+      "const": 1401374287
+    },
+    "schemaVersion": {
+      "const": 1
+    },
+    "tag": {
+      "$ref": "#/$defs/version"
+    },
+    "targets": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "archive": {
+            "$ref": "#/$defs/asset"
+          },
+          "binary": {
+            "additionalProperties": false,
+            "properties": {
+              "name": {
+                "enum": [
+                  "ond-lsp",
+                  "ond-lsp.exe"
+                ]
+              },
+              "sha256": {
+                "$ref": "#/$defs/hash"
+              }
+            },
+            "required": [
+              "name",
+              "sha256"
+            ],
+            "type": "object"
+          },
+          "checksum": {
+            "$ref": "#/$defs/asset"
+          },
+          "rustTarget": {
+            "enum": [
+              "x86_64-unknown-linux-gnu",
+              "x86_64-pc-windows-msvc"
+            ]
+          },
+          "target": {
+            "enum": [
+              "linux-x86_64",
+              "windows-x86_64"
+            ]
+          }
+        },
+        "required": [
+          "target",
+          "rustTarget",
+          "archive",
+          "checksum",
+          "binary"
+        ],
+        "type": "object"
+      },
+      "maxItems": 2,
+      "minItems": 2,
+      "type": "array"
+    },
+    "version": {
+      "$ref": "#/$defs/version"
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "contract",
+    "repository",
+    "repositoryId",
+    "version",
+    "tag",
+    "commit",
+    "releaseId",
+    "manifest",
+    "targets"
+  ],
+  "title": "Immutable Ond release lock",
+  "type": "object"
+}

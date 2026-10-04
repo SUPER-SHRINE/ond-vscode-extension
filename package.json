@@ -1,0 +1,141 @@
+{
+  "name": "ond-vscode-ext",
+  "displayName": "Ond",
+  "description": "Language support for the Ond programming language.",
+  "version": "0.1.4",
+  "publisher": "super-shrine",
+  "license": "MIT",
+  "icon": "icons/ond_logo.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SUPER-SHRINE/ond-vscode-extension.git"
+  },
+  "bugs": {
+    "url": "https://github.com/SUPER-SHRINE/ond-vscode-extension/issues"
+  },
+  "homepage": "https://github.com/SUPER-SHRINE/ond-vscode-extension#readme",
+  "keywords": [
+    "ond",
+    "language",
+    "language-server",
+    "syntax-highlighting"
+  ],
+  "engines": {
+    "vscode": "^1.96.0"
+  },
+  "extensionKind": [
+    "workspace"
+  ],
+  "categories": [
+    "Programming Languages"
+  ],
+  "activationEvents": [
+    "onLanguage:ond",
+    "workspaceContains:**/*.ond"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "ond",
+        "aliases": [
+          "ond",
+          "Ond"
+        ],
+        "extensions": [
+          ".ond"
+        ],
+        "configuration": "./language-configuration.json",
+        "icon": {
+          "light": "./icons/ond_file_icon.png",
+          "dark": "./icons/ond_file_icon.png"
+        }
+      }
+    ],
+    "grammars": [
+      {
+        "language": "ond",
+        "scopeName": "source.ond",
+        "path": "./syntaxes/ond.tmLanguage.json"
+      }
+    ],
+    "themes": [
+      {
+        "label": "Ond Dark Theme",
+        "uiTheme": "vs-dark",
+        "path": "./themes/ond-dark-color-theme.json"
+      }
+    ],
+    "semanticTokenTypes": [
+      {
+        "id": "receiver",
+        "description": "Ond method receiver"
+      }
+    ],
+    "semanticTokenScopes": [
+      {
+        "language": "ond",
+        "scopes": {
+          "namespace": [
+            "entity.name.namespace.ond"
+          ],
+          "type": [
+            "entity.name.type.ond"
+          ],
+          "function": [
+            "entity.name.function.declaration.ond",
+            "entity.name.function.call.ond"
+          ],
+          "method": [
+            "entity.name.function.method.declaration.ond",
+            "entity.name.function.method.ond"
+          ],
+          "property": [
+            "variable.other.property.ond"
+          ],
+          "parameter": [
+            "variable.parameter.ond"
+          ],
+          "typeParameter": [
+            "entity.name.type.parameter.ond"
+          ],
+          "variable": [
+            "variable.other.readwrite.ond"
+          ],
+          "variable.readonly": [
+            "variable.other.constant.ond"
+          ],
+          "receiver": [
+            "variable.language.receiver.ond"
+          ]
+        }
+      }
+    ]
+  },
+  "scripts": {
+    "check-types": "tsc --noEmit -p .",
+    "check-manifest": "node scripts/check-manifest.mjs",
+    "check": "npm run check-types && npm run check-manifest && node --test scripts/*.test.mjs scripts/ond-sync/*.test.mjs",
+    "build": "npm run check-types && node esbuild.mjs",
+    "ond:sync": "node scripts/ond-sync/cli.mjs",
+    "build:server": "node scripts/build-server.mjs",
+    "verify:release": "node scripts/verify-release.mjs && node scripts/smoke-lsp.mjs",
+    "package": "npm run check && node esbuild.mjs --production && npm run build:server && npm run verify:release",
+    "package:vsix": "node scripts/package-vsix.mjs",
+    "package:release": "pwsh -NoProfile -File scripts/package-release.ps1",
+    "vscode:prepublish": "npm run package",
+    "test:integration": "node scripts/integration/run.mjs",
+    "test:ond-source": "node scripts/test-ond-source.mjs"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.1",
+    "@types/vscode": "^1.96.0",
+    "@vscode/test-electron": "3.1.0",
+    "@vscode/vsce": "^4.0.0",
+    "esbuild": "^0.25.10",
+    "typescript": "^5.7.2"
+  }
+}

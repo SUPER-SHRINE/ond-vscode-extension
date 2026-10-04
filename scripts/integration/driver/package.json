@@ -1,0 +1,12 @@
+{
+  "name": "ond-integration-driver",
+  "publisher": "ond-test",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.96.0"
+  },
+  "main": "extension.cjs",
+  "activationEvents": [
+    "onStartupFinished"
+  ]
+}

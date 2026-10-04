@@ -1,0 +1,63 @@
+# 変更履歴
+
+この文書では、Ond VS Code Extensionの利用者向け変更を記録します。
+
+## [未リリース]
+
+今後のrelease plannerが生成する変更を記録します。
+
+## [0.1.4] - リリース準備中
+
+### 変更
+
+- VSIXへ同梱するMicrosoft Language Client、ond-lspと各MIT/ISCライセンス・著作権表示を追加
+- Ond 0.1.3以降の公式archive noticeをlock検証後にVSIXへ変更せず引き継ぐ準備を追加。現行lockは0.1.2のまま
+- color theme名を`Ond Dark Theme`へ変更
+- 認証情報・秘密鍵類をGit管理対象外に追加
+- npm auditの警告を解消
+
+Ond 0.1.3の公開成果物が確定した後に正式lockを更新します。現行Ond lockのSHA-256は変更していません。
+
+## [0.1.3] - リリース準備中
+
+### 変更
+
+- 同梱Ondを0.1.2へ更新（commit `2777310f98f5e7be7cc5e3e554d2b99bbd61dcb8`、lock SHA-256 `296e0c73a12a4b2cee2cd201caad8e9292963d769150ac05f785b3cd08d944c0`）。Ond 0.1.2は2026-10-04に公開済みのmanifest-v1 Releaseから採用。
+- Ondの正式採用入力をrelease lockへ統一し、明示入力から同じ更新差分を生成するresolve・plan・applyを追加。
+- 新しいtag workflowは対象OSごとに新しい候補のVSIXを生成し、その同じbytesを実hostで検証してMarketplaceとGitHub Releaseへ公開する。
+- branch protectionとEnvironment承認はGitHubのnative設定に委ね、scriptのsettings監査と追加Administration read権限の要求を除去。レビュー・CI・配布物の証拠照合は維持。
+- main向けPR/CIのexact-head検証と公開gateの判断が残っており、拡張0.1.3は公開前。
+
+## [0.1.2] - 2026-10-04
+
+### 追加
+
+- Linux x86_64（glibc）向けVSIXにOnd 0.1.1のLanguage Serverを同梱
+- WindowsとLinuxそれぞれでbinary検証、LSP smoke test、対象別VSIX生成を実行
+- developのGitHub Release自動公開を維持し、両対象のVSIXとSHA-256を添付
+
+
+## [0.1.1] - 2026-10-04
+
+### 変更
+
+- Explorerとeditor tabで、小さい表示サイズに合わせてOndファイルアイコンの位置を調整
+- 正式なVSIXではOndのGitHub Releaseから取得した検証済み`ond-lsp.exe`を同梱し、元assetの情報とSHA-256を記録
+
+## [0.1.0] - 2026-10-03
+
+### 追加
+
+- Ondの構文highlighting、comment、bracket、auto closing、indentationを追加
+- `ond-lsp`による診断、補完、hover、定義移動、参照検索、rename、semantic tokenを追加
+- `ond.toml`、`ond.lock`、依存packageの変更に応じたproject再読込を追加
+- Windows x64向けVSIXへLanguage Serverを同梱するpackage処理を追加
+- 同梱Language Serverのversion、target、SHA-256を記録する検証処理を追加
+- `Ond Dark Theme` color themeを追加
+
+[未リリース]: https://github.com/SUPER-SHRINE/ond-vscode-extension/compare/0.1.4...develop
+[0.1.4]: https://github.com/SUPER-SHRINE/ond-vscode-extension/compare/0.1.3...0.1.4
+[0.1.3]: https://github.com/SUPER-SHRINE/ond-vscode-extension/compare/0.1.2...0.1.3
+[0.1.1]: https://github.com/SUPER-SHRINE/ond-vscode-extension/compare/0.1.0...0.1.1
+[0.1.0]: https://github.com/SUPER-SHRINE/ond-vscode-extension/releases/tag/0.1.0
+[0.1.2]: https://github.com/SUPER-SHRINE/ond-vscode-extension/compare/0.1.1...0.1.2

@@ -1,0 +1,293 @@
+name: 拡張を公開
+
+on:
+  push:
+    tags:
+      - "*.*.*"
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: Marketplace公開identityの初期設定
+        required: true
+        type: choice
+        default: show-identity
+        options:
+          - show-identity
+          - verify-access
+
+permissions:
+  contents: read
+
+concurrency:
+  group: marketplace-publish-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  setup:
+    name: Marketplace公開identityを確認
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: windows-latest
+    timeout-minutes: 10
+    environment: visual-studio-marketplace
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: AzureへOIDC login
+        uses: azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          allow-no-subscriptions: true
+
+      - name: Marketplace identity IDを取得
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $profile = az rest `
+              --method GET `
+              --url "https://app.vssps.visualstudio.com/_apis/profile/profiles/me?api-version=7.1" `
+              --resource "499b84ac-1321-427f-aa17-267ca6975798" |
+              ConvertFrom-Json
+          if (-not $profile.id) {
+              throw "Marketplace identity profile did not contain an id."
+          }
+          Write-Output "Marketplace identity ID: $($profile.id)"
+
+      - name: Checkout
+        if: inputs.operation == 'verify-access'
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+
+      - name: Node.js 22を準備
+        if: inputs.operation == 'verify-access'
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: publish toolを復元
+        if: inputs.operation == 'verify-access'
+        run: npm ci --ignore-scripts
+
+      - name: Publisher所属を確認
+        if: inputs.operation == 'verify-access'
+        run: node node_modules/@vscode/vsce/vsce verify-pat super-shrine --azure-credential
+
+  build:
+    name: 正式なVSIXを生成
+    if: github.event_name == 'push'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            target: windows-x86_64
+          - os: ubuntu-22.04
+            target: linux-x86_64
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Release tagを検証
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $tag = $env:GITHUB_REF_NAME
+          if ($tag -notmatch '^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$') {
+              throw "Tag must be strict SemVer: $tag"
+          }
+
+          $manifest = Get-Content -Raw -LiteralPath package.json | ConvertFrom-Json
+          if ($manifest.version -ne $tag) {
+              throw "Tag $tag does not match package.json version $($manifest.version)."
+          }
+
+          git merge-base --is-ancestor $env:GITHUB_SHA refs/remotes/origin/main
+          if ($LASTEXITCODE -ne 0) {
+              throw "Release tag must point to a commit contained in main."
+          }
+
+      - name: Node.js 22を準備
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: dependencyを復元
+        run: npm ci
+
+      - name: Ond Release用tokenを発行
+        if: vars.OND_RELEASE_PUBLIC != 'true'
+        id: ond-token
+        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349
+        with:
+          app-id: 5174333
+          private-key: ${{ secrets.SUPER_SHRINE_WORKER_PRIVATE_KEY }}
+          owner: SUPER-SHRINE
+          repositories: ond
+          permission-contents: read
+
+      - name: 正式なVSIXを生成
+        shell: pwsh
+        env:
+          OND_RELEASE_TOKEN: ${{ steps.ond-token.outputs.token }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          $token = $env:OND_RELEASE_TOKEN
+          Remove-Item Env:OND_RELEASE_TOKEN
+          try {
+              & ./scripts/package-release.ps1 -Token $token
+          }
+          finally {
+              $token = $null
+          }
+
+      - name: Linux実VS Codeで同一VSIXを2回検証
+        if: runner.os == 'Linux'
+        run: xvfb-run -a --server-args="-screen 0 1280x900x24" npm run test:integration
+
+      - name: Windows実VS Codeで同一VSIXを2回検証
+        if: runner.os == 'Windows'
+        run: npm run test:integration
+
+      - name: 公開packageを保存
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: marketplace-package-${{ github.ref_name }}-${{ matrix.target }}
+          path: |
+            ond-vscode-extension-${{ github.ref_name }}-${{ matrix.target }}.vsix
+            ond-vscode-extension-${{ github.ref_name }}-${{ matrix.target }}.vsix.sha256
+            ond-vscode-extension-${{ github.ref_name }}-${{ matrix.target }}.vsix.verified.json
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    name: Visual Studio Marketplaceへ公開
+    if: github.event_name == 'push'
+    needs: build
+    strategy:
+      fail-fast: false
+      max-parallel: 1
+      matrix:
+        target: [windows-x86_64, linux-x86_64]
+    runs-on: windows-latest
+    timeout-minutes: 10
+    environment: visual-studio-marketplace
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+
+      - name: Node.js 22を準備
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: publish toolを復元
+        run: npm ci --ignore-scripts
+
+      - name: 公開packageを取得
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: marketplace-package-${{ github.ref_name }}-${{ matrix.target }}
+          path: release-package
+
+      - name: AzureへOIDC login
+        uses: azure/login@a641126d1b8aa4d1fa005f4f92df94a3a4c4c906
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          allow-no-subscriptions: true
+
+      - name: Ond読取tokenを発行（独立再検証）
+        if: vars.OND_RELEASE_PUBLIC != 'true'
+        id: ond-token
+        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349
+        with:
+          app-id: 5174333
+          private-key: ${{ secrets.SUPER_SHRINE_WORKER_PRIVATE_KEY }}
+          owner: SUPER-SHRINE
+          repositories: ond
+          permission-contents: read
+
+      - name: 同一検証済みVSIXだけをMarketplaceへ公開
+        env:
+          OND_RELEASE_TOKEN: ${{ steps.ond-token.outputs.token }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/publish-verified.mjs marketplace release-package ${{ matrix.target }}
+
+      - name: target別公開状態を保存
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: publication-${{ github.ref_name }}-${{ matrix.target }}
+          path: release-package/publication-*.json
+          if-no-files-found: warn
+
+  github-release:
+    name: GitHub Releaseを公開
+    environment: visual-studio-marketplace
+    if: github.event_name == 'push'
+    needs:
+      - build
+      - publish
+    runs-on: windows-latest
+    timeout-minutes: 10
+    permissions:
+      actions: read
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+
+      - name: 公開packageを取得
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          pattern: marketplace-package-${{ github.ref_name }}-*
+          merge-multiple: true
+          path: release-package
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci --ignore-scripts
+
+      - name: Ond読取tokenを発行（独立再検証）
+        if: vars.OND_RELEASE_PUBLIC != 'true'
+        id: ond-token
+        uses: actions/create-github-app-token@fee1f7d63c2ff003460e3d139729b119787bc349
+        with:
+          app-id: 5174333
+          private-key: ${{ secrets.SUPER_SHRINE_WORKER_PRIVATE_KEY }}
+          owner: SUPER-SHRINE
+          repositories: ond
+          permission-contents: read
+
+      - name: 同一候補だけを追加・再開（差替禁止）
+        env:
+          OND_RELEASE_TOKEN: ${{ steps.ond-token.outputs.token }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/publish-verified.mjs github release-package
+
+      - name: 部分公開状態を保存
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: publication-github-${{ github.ref_name }}
+          path: release-package/publication-github.json
+          if-no-files-found: warn

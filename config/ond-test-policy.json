@@ -1,0 +1,10 @@
+{
+  "hostRuns": 2,
+  "schemaVersion": 1,
+  "source": "ond-release",
+  "targets": [
+    "linux-x86_64",
+    "windows-x86_64"
+  ],
+  "vscodeVersion": "1.108.0"
+}

@@ -1,0 +1,15 @@
+{
+  "files": [
+    {
+      "content": "# 変更履歴\n\n## [未リリース]\n\n- 同梱Ondを0.1.2へ更新（commit `aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa`、lock SHA-256 `afb62f3057da28d88f24860365b7db8d78c7697b7edb33b75e9d304ce6301a58`）。\n",
+      "mode": "100644",
+      "path": "CHANGELOG.md"
+    },
+    {
+      "content": "{\n  \"commit\": \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\n  \"contract\": \"manifest-v1\",\n  \"manifest\": {\n    \"id\": 705,\n    \"name\": \"ond-0.1.2-manifest.json\",\n    \"sha256\": \"502cdb98db0e6e45241115aea3f9496b461233008da1f53eac6f98cf17e4a93d\",\n    \"size\": 753\n  },\n  \"releaseId\": 402902424,\n  \"repository\": \"SUPER-SHRINE/ond\",\n  \"repositoryId\": 1401374287,\n  \"schemaVersion\": 1,\n  \"tag\": \"0.1.2\",\n  \"targets\": [\n    {\n      \"archive\": {\n        \"id\": 701,\n        \"name\": \"ond-0.1.2-linux-x86_64.tar.gz\",\n        \"sha256\": \"f84b2f6460b9cf3e4f1ff2a9c8fd74421402478aeef09f009ce391244b72f3b2\",\n        \"size\": 105\n      },\n      \"binary\": {\n        \"name\": \"ond-lsp\",\n        \"sha256\": \"1cedebf73a9f41463afa540c67404d9994fa4e639403afa97367e071f70ae830\"\n      },\n      \"checksum\": {\n        \"id\": 702,\n        \"name\": \"ond-0.1.2-linux-x86_64.tar.gz.sha256\",\n        \"sha256\": \"6c5a0f05927eebeef8e4edfdbc98a54611cdb78bceb832af5bb55a915f0e1288\",\n        \"size\": 96\n      },\n      \"rustTarget\": \"x86_64-unknown-linux-gnu\",\n      \"target\": \"linux-x86_64\"\n    },\n    {\n      \"archive\": {\n        \"id\": 703,\n        \"name\": \"ond-0.1.2-windows-x86_64.zip\",\n        \"sha256\": \"7dde0fb68432622166c835f9fbc506b391145368ec46d51a955c85a7b1464415\",\n        \"size\": 142\n      },\n      \"binary\": {\n        \"name\": \"ond-lsp.exe\",\n        \"sha256\": \"352a6aee58e798c6a649559af9cf9b5db45d74295e7189f43a1e55afa8129a62\"\n      },\n      \"checksum\": {\n        \"id\": 704,\n        \"name\": \"ond-0.1.2-windows-x86_64.zip.sha256\",\n        \"sha256\": \"52ad438ffd50a23910579a0e701429018a0493be54105420138a35a7e15c3f19\",\n        \"size\": 95\n      },\n      \"rustTarget\": \"x86_64-pc-windows-msvc\",\n      \"target\": \"windows-x86_64\"\n    }\n  ],\n  \"version\": \"0.1.2\"\n}\n",
+      "mode": "100644",
+      "path": "config/ond-release.lock.json"
+    }
+  ],
+  "tree": "056687365bd4ba63b7abe3828afd9e83a6542637"
+}
