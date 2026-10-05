@@ -61,8 +61,8 @@ concurrencyは完全なqueueを保証しないので、未処理eventは明示ru
 
 ## 残作業と現在の検証範囲
 
-- 新private repositoryへの移行では、現行lockが旧Ond repository（ID `1401374287`）の0.1.2 Release資産を固定しています。Ond 0.1.3 Releaseの存在・tag・manifest・archive/checksumを実際に確認するまで、lockのrepository IDや資産を差し替えません。新repo IDへの変更と新lockは、検証可能な0.1.3 Release証拠と同じfeatureで更新します。それまではRelease acquisitionと依存CIがBLOCKEDであり、成功として扱いません。
-- extension0.1.3用の正式lockは、2026-10-04に公開されたOnd0.1.2 Release（commit `2777310f98f5e7be7cc5e3e554d2b99bbd61dcb8`）のmanifest-v1と全archive/checksumを検証して更新済みです。初期0.1.1 bootstrapの採用待ちは完了しています。
+- private repository移行時に旧Ond repository ID `1401374287` を参照していたlock・schema・validatorを、新Ond ID `1404563628` へ同時に移行しました。Ond 0.1.3 Release（ID `403286230`、commit `c14344722ea7ed09c9459a812f613e35fad7e37e`）のmanifest-v1、両OSのarchive/checksum asset、archive内binaryとnoticeを検証してlockへ固定しました。
+- extension0.1.4用lock SHA-256は`72c56431ccfe5deb8c90774a23f5d1a134f4d21c23474c90d56977bc7af5e727`です。初期0.1.1 bootstrapの採用待ちは完了しています。
 - extension0.1.3はrelease準備中です。main向けPR/CIのexact-headでWindows/Linux両方の実VS Code全suiteを各2回通し、人が公開gateを判断する作業が残っています。現時点で公開準備完了とは扱いません。
 - 初回quality導入はレビューしたtooling全体を第1commitへ固定し、第2commitでacquireのcheckoutをそのimmutable SHAへpinします。
   同じfeature PR内で最終全差分レビューを行い、mainを直接変更しません。pin変更には依存module/schema/policy全体の再レビューが必要です。
