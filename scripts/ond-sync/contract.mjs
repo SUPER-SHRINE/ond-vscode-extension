@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 export const REPOSITORY = 'SUPER-SHRINE/ond';
-export const REPOSITORY_ID = 1401374287;
+export const REPOSITORY_ID = 1404563628;
 export const TARGETS = {
   'linux-x86_64': { rustTarget: 'x86_64-unknown-linux-gnu', extension: 'tar.gz', binary: 'ond-lsp' },
   'windows-x86_64': { rustTarget: 'x86_64-pc-windows-msvc', extension: 'zip', binary: 'ond-lsp.exe' }

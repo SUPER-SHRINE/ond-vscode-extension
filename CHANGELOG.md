@@ -6,19 +6,19 @@
 
 今後のrelease plannerが生成する変更を記録します。
 
-## [0.1.4] - リリース準備中
+## [0.1.4]
 
 ### 変更
 
 - VSIXへ同梱するMicrosoft Language Client、ond-lspと各MIT/ISCライセンス・著作権表示を追加
-- Ond 0.1.3以降の公式archive noticeをlock検証後にVSIXへ変更せず引き継ぐ準備を追加。現行lockは0.1.2のまま
+- Ond 0.1.3 Release（commit `c14344722ea7ed09c9459a812f613e35fad7e37e`）を正式採用し、Windows/Linux archive、SHA-256 sidecar、manifest、binaryと公式noticeを検証
 - color theme名を`Ond Dark Theme`へ変更
 - 認証情報・秘密鍵類をGit管理対象外に追加
 - npm auditの警告を解消
 
-Ond 0.1.3の公開成果物が確定した後に正式lockを更新します。現行Ond lockのSHA-256は変更していません。
+Ond 0.1.3のlock SHA-256は`72c56431ccfe5deb8c90774a23f5d1a134f4d21c23474c90d56977bc7af5e727`です。lockには新Ond repository ID `1404563628`、Release IDと各asset IDを固定しています。
 
-## [0.1.3] - リリース準備中
+## [0.1.3] - 2026-10-04
 
 ### 変更
 
@@ -26,7 +26,7 @@ Ond 0.1.3の公開成果物が確定した後に正式lockを更新します。�
 - Ondの正式採用入力をrelease lockへ統一し、明示入力から同じ更新差分を生成するresolve・plan・applyを追加。
 - 新しいtag workflowは対象OSごとに新しい候補のVSIXを生成し、その同じbytesを実hostで検証してMarketplaceとGitHub Releaseへ公開する。
 - branch protectionとEnvironment承認はGitHubのnative設定に委ね、scriptのsettings監査と追加Administration read権限の要求を除去。レビュー・CI・配布物の証拠照合は維持。
-- main向けPR/CIのexact-head検証と公開gateの判断が残っており、拡張0.1.3は公開前。
+- 拡張0.1.3を2026-10-04に旧履歴repositoryのGitHub Releaseへ公開（Linux/Windows向けVSIX、checksum、verified.jsonの計6 asset）。
 
 ## [0.1.2] - 2026-10-04
 
@@ -55,9 +55,9 @@ Ond 0.1.3の公開成果物が確定した後に正式lockを更新します。�
 - 同梱Language Serverのversion、target、SHA-256を記録する検証処理を追加
 - `Ond Dark Theme` color themeを追加
 
-[未リリース]: https://github.com/SUPER-SHRINE/ond-vscode-extension/compare/0.1.4...develop
-[0.1.4]: https://github.com/SUPER-SHRINE/ond-vscode-extension/compare/0.1.3...0.1.4
-[0.1.3]: https://github.com/SUPER-SHRINE/ond-vscode-extension/compare/0.1.2...0.1.3
-[0.1.1]: https://github.com/SUPER-SHRINE/ond-vscode-extension/compare/0.1.0...0.1.1
-[0.1.0]: https://github.com/SUPER-SHRINE/ond-vscode-extension/releases/tag/0.1.0
-[0.1.2]: https://github.com/SUPER-SHRINE/ond-vscode-extension/compare/0.1.1...0.1.2
+<!-- 旧tagは移行先へ複製せず、公開済み版の比較リンクはread-only history repoへ向ける。 -->
+[未リリース]: https://github.com/SUPER-SHRINE/ond-vscode-extension/compare/main...develop
+[0.1.3]: https://github.com/SUPER-SHRINE/ond-vscode-extension-private-history/compare/0.1.2...0.1.3
+[0.1.2]: https://github.com/SUPER-SHRINE/ond-vscode-extension-private-history/compare/0.1.1...0.1.2
+[0.1.1]: https://github.com/SUPER-SHRINE/ond-vscode-extension-private-history/compare/0.1.0...0.1.1
+[0.1.0]: https://github.com/SUPER-SHRINE/ond-vscode-extension-private-history/releases/tag/0.1.0

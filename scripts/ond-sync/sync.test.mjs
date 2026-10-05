@@ -58,7 +58,7 @@ test('apply rejects stale base, manual branch, conflicting PR, foreign PR and ch
 test('apply handles 422 concurrent exact branch/PR and stops closed/manual PRs',async()=>{const i=input(),{r,state,p}=remote(i),createBranch=r.createBranch,createPR=r.createPR;r.createBranch=async(...args)=>{await createBranch(...args);throw Object.assign(new Error('race'),{status:422});};r.createPR=async(...args)=>{await createPR(...args);throw Object.assign(new Error('race'),{status:422});};assert.equal((await apply(i,p,r,async()=>{})).state,'PR_OPEN');state.prs[0].state='closed';assert.equal((await apply(i,p,r,async()=>{})).state,'CLOSED');state.prs[0].body='manual';await assert.rejects(apply(i,p,r,async()=>{}),/MANUAL_PR/);});
 test('asset publication reconciles partial success and never replaces differing bytes',async()=>{const files=[{name:'a',bytes:Buffer.from('a')},{name:'b',bytes:Buffer.from('b')}];assert.equal((await reconcileAssets(files,async()=>null)).state,'UNPUBLISHED');assert.equal((await reconcileAssets(files,async name=>name==='a'?Buffer.from('a'):null)).state,'PARTIALLY_PUBLISHED');assert.equal((await reconcileAssets(files,async name=>Buffer.from(name))).state,'PUBLISHED_TARGETS_ALL');await assert.rejects(reconcileAssets(files,async()=>Buffer.from('other')),/replacement forbidden/);});
 test('self-declared release metadata cannot pass lock verification',()=>{const c=candidate(),t=c.lock.targets[0],binary=extractBinary(Buffer.from(c.evidence[0].content,'base64'),t.binary.name,'tar.gz'),metadata=releaseMetadata(c.lock,t.target);verifyServer(c.lock,t.target,metadata,binary);for(const change of [m=>m.source.kind='local-build',m=>m.source.assetId++,m=>m.lockSha256='0'.repeat(64),m=>m.source.commit=zero]){const m=clone(metadata);change(m);assert.throws(()=>verifyServer(c.lock,t.target,m,binary));}});
-test('visibility refuses private-source disclosure to public extension',async()=>{const ond={call:async()=>({id:1401374287,full_name:'SUPER-SHRINE/ond',private:true})},extension={call:async()=>({id:1403086732,full_name:'SUPER-SHRINE/ond-vscode-extension',private:false})};await assert.rejects(verifyVisibility(ond,extension),/disclosure approval/);});
+test('visibility refuses private-source disclosure to public extension',async()=>{const ond={call:async()=>({id:1404563628,full_name:'SUPER-SHRINE/ond',private:true})},extension={call:async()=>({id:1404564933,full_name:'SUPER-SHRINE/ond-vscode-extension',private:false})};await assert.rejects(verifyVisibility(ond,extension),/disclosure approval/);});
 
 test('fixed golden file bytes, modes and tree detect generator changes',()=>{const result=plan(input()),expected=parseCanonical(readFileSync(join(ROOT,'scripts/ond-sync/fixtures/golden-plan.json')));assert.equal(canonical({files:result.files,tree:result.tree}),canonical(expected));});
 test('publication evidence binds the exact VSIX, lock, target, policy and both actual host runs',()=>{
@@ -120,6 +120,41 @@ test('locked acquisition removes the stale opposite binary and rejects extra ser
     writeFileSync(join(output,'private.pdb'),'private debug');assert.throws(()=>checkServerDirectory(output,platform.target),/Unexpected server files/);
     const opposite=platform.target==='linux-x86_64'?'windows-x86_64':'linux-x86_64';cleanOppositeBinary(output,opposite);assert(!existsSync(join(output,platform.binary)));
   } finally {rmSync(dir,{recursive:true,force:true});}
+});
+test('online acquisition checks repository identities before release resolution without TDZ shadowing',()=>{
+  const run=extensionID=>{
+    const dir=mkdtempSync(join(tmpdir(),'ond-online-acquire-')),routesFile=join(dir,'routes.json'),requestsFile=join(dir,'requests.jsonl'),output=join(dir,'output'),lock=join(ROOT,LOCK_PATH);
+    const extensionAPI='https://api.github.com/repos/SUPER-SHRINE/ond-vscode-extension',ondAPI='https://api.github.com/repos/SUPER-SHRINE/ond';
+    const routes={
+      [ondAPI]:[{json:{id:1404563628,full_name:'SUPER-SHRINE/ond',private:true}}],
+      [extensionAPI]:[{json:{id:extensionID,full_name:'SUPER-SHRINE/ond-vscode-extension',private:true}}],
+      [`${ondAPI}/releases/tags/0.1.3`]:[{status:404,json:{message:'fixture release unavailable'}}]
+    };
+    writeFileSync(routesFile,JSON.stringify(routes));writeFileSync(requestsFile,'');
+    try {
+      const result=spawnSync(process.execPath,['--import',new URL('./fixtures/gate-fetch.mjs',import.meta.url).href,join(ROOT,'scripts/ond-sync/cli.mjs'),'acquire','--lock',lock,'--out',output],{encoding:'utf8',env:{...process.env,GH_TOKEN:'',GITHUB_TOKEN:'',OND_RELEASE_TOKEN:'',OND_GATE_ROUTES:routesFile,OND_GATE_REQUESTS:requestsFile}});
+      assert.ifError(result.error);
+      const requests=readFileSync(requestsFile,'utf8').trim().split('\n').filter(Boolean).map(line=>JSON.parse(line).address);
+      return {dir,output,result,requests,releaseURL:`${ondAPI}/releases/tags/0.1.3`};
+    } catch(error) {rmSync(dir,{recursive:true,force:true});throw error;}
+  };
+  const valid=run(1404564933);
+  try {
+    assert.notEqual(valid.result.status,0);
+    assert.match(valid.result.stderr,/GitHub GET failed \(404\)/);
+    assert.doesNotMatch(valid.result.stderr,/ReferenceError|Cannot access 'extension'/);
+    assert.equal(valid.requests.filter(url=>url==='https://api.github.com/repos/SUPER-SHRINE/ond').length,2);
+    assert(valid.requests.includes('https://api.github.com/repos/SUPER-SHRINE/ond-vscode-extension'));
+    assert(valid.requests.includes(valid.releaseURL));
+    assert(!existsSync(join(valid.output,getPlatform().binary)),'A rejected release must not write an executable');
+  } finally {rmSync(valid.dir,{recursive:true,force:true});}
+  const wrong=run(1404564999);
+  try {
+    assert.notEqual(wrong.result.status,0);
+    assert.match(wrong.result.stderr,/AssertionError/);
+    assert(!wrong.requests.includes(wrong.releaseURL),'Wrong repository identity must stop before release access');
+    assert(!existsSync(join(wrong.output,getPlatform().binary)),'A wrong repository must not write an executable');
+  } finally {rmSync(wrong.dir,{recursive:true,force:true});}
 });
 test('same-head PR retargeting stops retries and final validation without replacement PR creation',async()=>{
   for(const timing of ['before-retry','during-release','after-create']) {

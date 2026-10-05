@@ -40,7 +40,7 @@ export function plan(input) {
   assert.deepEqual([...modulePaths].sort(),[...DISTRIBUTION].sort(),'Unknown/missing distribution module');
   assert(Array.isArray(input.baseTree)&&input.baseTree.length<=100000);assert(Array.isArray(input.evidence)&&input.evidence.length<=5);
   input=normalizeInput(input);assert.equal(input.plannerDigest,sha256(canonical(input.execution)),'Planner distribution mismatch');
-  keys(input.base,['repository','repositoryId','ref','commit','tree']);assert.equal(input.base.repository,'SUPER-SHRINE/ond-vscode-extension');assert.equal(input.base.repositoryId,1403086732);assert.equal(input.base.ref,'develop');commit(input.base.commit);commit(input.base.tree);
+  keys(input.base,['repository','repositoryId','ref','commit','tree']);assert.equal(input.base.repository,'SUPER-SHRINE/ond-vscode-extension');assert.equal(input.base.repositoryId,1404564933);assert.equal(input.base.ref,'develop');commit(input.base.commit);commit(input.base.tree);
   assert.equal(treeHash(input.baseTree),input.base.tree,'Base tree mismatch');
   keys(input.baseFiles,[LOCK_PATH,CHANGELOG_PATH]);
   for(const [path,file] of Object.entries(input.baseFiles)) {

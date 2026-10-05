@@ -69,7 +69,7 @@ export async function apply(input, suppliedPlan, remote, verifyRelease) {
 function pullRequest(p){return {number:p.number,head:p.head.ref,base:p.base.ref,state:p.state,merged:!!p.merged_at,body:p.body||'',headSha:p.head.sha,headRepository:p.head.repo?.full_name,baseRepository:p.base.repo?.full_name};}
 export function githubRemote(api) {
   return {
-    async identity(){const r=await api.call('');assert.equal(r.id,1403086732);assert.equal(r.full_name,'SUPER-SHRINE/ond-vscode-extension');},
+    async identity(){const r=await api.call('');assert.equal(r.id,1404564933);assert.equal(r.full_name,'SUPER-SHRINE/ond-vscode-extension');},
     async base(){const r=await api.call('/git/ref/heads/develop'),c=await api.call(`/git/commits/${r.object.sha}`);return {sha:r.object.sha,tree:c.tree.sha};},
     async branch(name){const r=await api.call(`/git/ref/heads/${name}`,{optional:true});if(!r)return null;const c=await api.call(`/git/commits/${r.object.sha}`);return {sha:r.object.sha,tree:c.tree.sha,parents:c.parents.map(p=>p.sha),message:c.message};},
     async pullRequests(){return (await api.all('/pulls?state=all')).map(pullRequest);},

@@ -6,7 +6,7 @@ import { zipEntries } from './archive.mjs';
 import { verifyCandidate } from './publication.mjs';
 import { testPolicy } from './test-policy.mjs';
 const [number,runID]=process.argv.slice(2);assert.match(number||'',/^[1-9][0-9]*$/);assert.match(runID||'',/^[1-9][0-9]*$/);
-const api=new GitHub('SUPER-SHRINE/ond-vscode-extension',process.env.GITHUB_TOKEN||process.env.GH_TOKEN),repository=await api.call('');assert.equal(repository.id,1403086732);
+const api=new GitHub('SUPER-SHRINE/ond-vscode-extension',process.env.GITHUB_TOKEN||process.env.GH_TOKEN),repository=await api.call('');assert.equal(repository.id,1404564933);
 function checkPR(value){
   assert.equal(value.state,'open');assert.equal(value.base.ref,'develop');assert.equal(value.head.repo.id,repository.id);assert.equal(value.base.repo.id,repository.id);assert.equal(value.mergeable,true,'BLOCKED: mergeability unavailable');assert.equal(value.mergeable_state,'clean','BLOCKED: latest-base checks/reviews incomplete');
   commit(value.head.sha);commit(value.base.sha);commit(value.merge_commit_sha);
