@@ -55,9 +55,9 @@ Ond 0.1.3のlock SHA-256は`72c56431ccfe5deb8c90774a23f5d1a134f4d21c23474c90d569
 - 同梱Language Serverのversion、target、SHA-256を記録する検証処理を追加
 - `Ond Dark Theme` color themeを追加
 
-[未リリース]: https://github.com/SUPER-SHRINE/ond-vscode-extension/compare/0.1.4...develop
-[0.1.4]: https://github.com/SUPER-SHRINE/ond-vscode-extension/compare/0.1.3...0.1.4
-[0.1.3]: https://github.com/SUPER-SHRINE/ond-vscode-extension/compare/0.1.2...0.1.3
-[0.1.1]: https://github.com/SUPER-SHRINE/ond-vscode-extension/compare/0.1.0...0.1.1
-[0.1.0]: https://github.com/SUPER-SHRINE/ond-vscode-extension/releases/tag/0.1.0
-[0.1.2]: https://github.com/SUPER-SHRINE/ond-vscode-extension/compare/0.1.1...0.1.2
+<!-- 旧tagは移行先へ複製せず、公開済み版の比較リンクはread-only history repoへ向ける。 -->
+[未リリース]: https://github.com/SUPER-SHRINE/ond-vscode-extension/compare/main...develop
+[0.1.3]: https://github.com/SUPER-SHRINE/ond-vscode-extension-private-history/compare/0.1.2...0.1.3
+[0.1.2]: https://github.com/SUPER-SHRINE/ond-vscode-extension-private-history/compare/0.1.1...0.1.2
+[0.1.1]: https://github.com/SUPER-SHRINE/ond-vscode-extension-private-history/compare/0.1.0...0.1.1
+[0.1.0]: https://github.com/SUPER-SHRINE/ond-vscode-extension-private-history/releases/tag/0.1.0
