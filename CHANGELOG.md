@@ -18,7 +18,7 @@
 
 Ond 0.1.3のlock SHA-256は`72c56431ccfe5deb8c90774a23f5d1a134f4d21c23474c90d56977bc7af5e727`です。lockには新Ond repository ID `1404563628`、Release IDと各asset IDを固定しています。
 
-## [0.1.3] - リリース準備中
+## [0.1.3] - 2026-10-04
 
 ### 変更
 
@@ -26,7 +26,7 @@ Ond 0.1.3のlock SHA-256は`72c56431ccfe5deb8c90774a23f5d1a134f4d21c23474c90d569
 - Ondの正式採用入力をrelease lockへ統一し、明示入力から同じ更新差分を生成するresolve・plan・applyを追加。
 - 新しいtag workflowは対象OSごとに新しい候補のVSIXを生成し、その同じbytesを実hostで検証してMarketplaceとGitHub Releaseへ公開する。
 - branch protectionとEnvironment承認はGitHubのnative設定に委ね、scriptのsettings監査と追加Administration read権限の要求を除去。レビュー・CI・配布物の証拠照合は維持。
-- main向けPR/CIのexact-head検証と公開gateの判断が残っており、拡張0.1.3は公開前。
+- 拡張0.1.3を2026-10-04に旧履歴repositoryのGitHub Releaseへ公開（Linux/Windows向けVSIX、checksum、verified.jsonの計6 asset）。
 
 ## [0.1.2] - 2026-10-04
 
