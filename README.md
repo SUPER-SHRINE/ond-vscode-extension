@@ -50,7 +50,7 @@ VSIXにはbinaryと、lock digest・release/asset ID・commitを記録する`ser
 install後にRust、Cargo、Node.js、Ond repositoryは不要で、拡張起動時のdownloadも行いません。
 ARM64、Alpine/musl、macOS、クロスパッケージは対象外です。
 
-拡張0.1.3ではOnd 0.1.2 Release（commit `2777310f98f5e7be7cc5e3e554d2b99bbd61dcb8`、manifest-v1）を採用しました。拡張0.1.4ではOnd 0.1.3の公開成果物が確定した後に正式lockを更新します。
+拡張0.1.4ではOnd 0.1.3 Release（repository ID `1404563628`、commit `c14344722ea7ed09c9459a812f613e35fad7e37e`、manifest-v1）を採用しました。全Release asset、SHA-256 sidecar、producer manifest、archive内binaryとnoticeを照合したlockを使用します。
 branch protectionとEnvironment承認はGitHubのnative設定に委ね、scriptは設定の監査・認定を行いません。settings APIの未設定・取得不能を自動失敗の条件にせず、実際のレビュー・CI・配布物の証拠を照合します。設定変更やAdministration readなどのApp権限追加は行っていません。
 
 ## 未公開Ondのsource検証

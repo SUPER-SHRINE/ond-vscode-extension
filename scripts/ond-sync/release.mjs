@@ -56,7 +56,7 @@ export async function materialize(api,lock) {
 
 export async function verifyVisibility(ond,extension) {
   const source=await ond.call(''),target=await extension.call('');
-  assert.equal(source.id,REPOSITORY_ID);assert.equal(target.id,1403086732);assert.equal(source.full_name,REPOSITORY);assert.equal(target.full_name,'SUPER-SHRINE/ond-vscode-extension');
+  assert.equal(source.id,REPOSITORY_ID);assert.equal(target.id,1404564933);assert.equal(source.full_name,REPOSITORY);assert.equal(target.full_name,'SUPER-SHRINE/ond-vscode-extension');
   assert.equal(typeof source.private,'boolean');assert.equal(typeof target.private,'boolean');
   assert(!(source.private&&!target.private),'BLOCKED: private Ond binaries need explicit public disclosure approval');
 }

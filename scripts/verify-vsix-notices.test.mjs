@@ -15,5 +15,5 @@ test("third-party notice rejects a missing copyright or license body", () => {
 });
 
 test("third-party notice requires the ond-lsp version from the release lock", () => {
-    assert.throws(() => verifyNoticeDocument(notices.replace("Ond Language Server 0.1.2", "Ond Language Server 0.1.3")), /version differs from the release lock/);
+    assert.throws(() => verifyNoticeDocument(notices.replace("Ond Language Server 0.1.3", "Ond Language Server 0.1.2")), /version differs from the release lock/);
 });

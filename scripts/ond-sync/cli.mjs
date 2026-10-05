@@ -18,7 +18,7 @@ const ond=new GitHub(REPOSITORY,process.env.OND_RELEASE_TOKEN),extension=new Git
 if(command==='check'){const lock=parseLock(readFileSync(options['--lock']||join(ROOT,LOCK_PATH)));console.log(`Release lock valid: ${lock.version}`);}
 if(command==='resolve'){
   const baseSHA=required('--base-sha');commit(baseSHA);
-  const repository=await extension.call('');assert.equal(repository.id,1403086732);assert.equal(repository.full_name,'SUPER-SHRINE/ond-vscode-extension');
+  const repository=await extension.call('');assert.equal(repository.id,1404564933);assert.equal(repository.full_name,'SUPER-SHRINE/ond-vscode-extension');
   const ref=await extension.call('/git/ref/heads/develop');assert.equal(ref.object.sha,baseSHA,'STALE_BASE');
   const baseCommit=await extension.call(`/git/commits/${baseSHA}`),tree=await extension.call(`/git/trees/${baseCommit.tree.sha}?recursive=1`);assert.equal(tree.truncated,false,'Truncated tree');
   const baseTree=tree.tree.filter(e=>e.type!=='tree').map(e=>({path:e.path,mode:e.mode,oid:e.sha})),baseFiles={};
@@ -38,7 +38,7 @@ if(command==='acquire'){
   let blobs;
   if(options['--archives']){const descriptors=lock.targets.flatMap(t=>[t.archive,t.checksum]).concat(lock.manifest?[lock.manifest]:[]);const evidence=descriptors.map(a=>({name:a.name,content:readFileSync(resolve(options['--archives'],a.name)).toString('base64')}));blobs=verifyEvidence(lock,evidence);}
   else {await verifyVisibility(ond,extension);const result=await materialize(ond,lock);blobs=new Map([...result].map(([key,v])=>[lock.targets.find(t=>t.target===key).archive.name,v.archive]));}
-  const {extractBinary,extractNotices}=await import('./archive.mjs');const extension=platform.target==='linux-x86_64'?'tar.gz':'zip',archive=blobs.get(target.archive.name),notices=extractNotices(archive,extension,lock.version),output=resolve(required('--out'));mkdirSync(output,{recursive:true});writeFileSync(join(output,platform.binary),extractBinary(archive,platform.binary,extension));if(process.platform==='linux')chmodSync(join(output,platform.binary),0o755);
+  const {extractBinary,extractNotices}=await import('./archive.mjs');const archiveFormat=platform.target==='linux-x86_64'?'tar.gz':'zip',archive=blobs.get(target.archive.name),notices=extractNotices(archive,archiveFormat,lock.version),output=resolve(required('--out'));mkdirSync(output,{recursive:true});writeFileSync(join(output,platform.binary),extractBinary(archive,platform.binary,archiveFormat));if(process.platform==='linux')chmodSync(join(output,platform.binary),0o755);
   if(notices)for(const [name,bytes] of Object.entries(notices))writeFileSync(join(output,name),bytes);
   cleanOppositeBinary(output,target.target);writeFileSync(join(output,'ond-lsp.json'),canonical(releaseMetadata(lock,target.target,notices)));checkServerDirectory(output,target.target,lock.version);console.log(`Verified release binary ${lock.version} ${target.target} ${target.binary.sha256}`);
 }

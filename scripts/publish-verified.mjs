@@ -15,7 +15,7 @@ version(tag);commit(sha);assert.equal(tag,manifest.version);
 // 今回承認したrelease準備の受入条件。bootstrap候補を0.1.3として公開しない。
 if(tag==='0.1.3')assert.equal(lock.version,'0.1.2','BLOCKED: extension 0.1.3 requires published Ond 0.1.2 adoption');
 const api=new GitHub('SUPER-SHRINE/ond-vscode-extension',process.env.GITHUB_TOKEN||process.env.GH_TOKEN);
-const repository=await api.call('');assert.equal(repository.id,1403086732);assert.equal(repository.full_name,'SUPER-SHRINE/ond-vscode-extension');
+const repository=await api.call('');assert.equal(repository.id,1404564933);assert.equal(repository.full_name,'SUPER-SHRINE/ond-vscode-extension');
 let tagObject=(await api.call(`/git/ref/tags/${tag}`)).object;for(let n=0;tagObject.type==='tag'&&n<5;n++)tagObject=(await api.call(`/git/tags/${tagObject.sha}`)).object;assert.equal(tagObject.type,'commit');assert.equal(tagObject.sha,sha,'Extension tag moved');
 const comparison=await api.call(`/compare/${sha}...main`);assert(['identical','ahead'].includes(comparison.status),'Tag outside main');
 // メタデータのkindだけで認定せず、ここでもlockの全assetを独立に取得・検証。

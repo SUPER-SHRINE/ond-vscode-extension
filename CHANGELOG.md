@@ -11,12 +11,12 @@
 ### 変更
 
 - VSIXへ同梱するMicrosoft Language Client、ond-lspと各MIT/ISCライセンス・著作権表示を追加
-- Ond 0.1.3以降の公式archive noticeをlock検証後にVSIXへ変更せず引き継ぐ準備を追加。現行lockは0.1.2のまま
+- Ond 0.1.3 Release（commit `c14344722ea7ed09c9459a812f613e35fad7e37e`）を正式採用し、Windows/Linux archive、SHA-256 sidecar、manifest、binaryと公式noticeを検証
 - color theme名を`Ond Dark Theme`へ変更
 - 認証情報・秘密鍵類をGit管理対象外に追加
 - npm auditの警告を解消
 
-Ond 0.1.3の公開成果物が確定した後に正式lockを更新します。現行Ond lockのSHA-256は変更していません。
+Ond 0.1.3のlock SHA-256は`72c56431ccfe5deb8c90774a23f5d1a134f4d21c23474c90d56977bc7af5e727`です。lockには新Ond repository ID `1404563628`、Release IDと各asset IDを固定しています。
 
 ## [0.1.3] - リリース準備中
 
@@ -55,9 +55,9 @@ Ond 0.1.3の公開成果物が確定した後に正式lockを更新します。�
 - 同梱Language Serverのversion、target、SHA-256を記録する検証処理を追加
 - `Ond Dark Theme` color themeを追加
 
-[未リリース]: https://github.com/SUPER-SHRINE/ond-vscode-extension/compare/0.1.4...develop
-[0.1.4]: https://github.com/SUPER-SHRINE/ond-vscode-extension/compare/0.1.3...0.1.4
-[0.1.3]: https://github.com/SUPER-SHRINE/ond-vscode-extension/compare/0.1.2...0.1.3
-[0.1.1]: https://github.com/SUPER-SHRINE/ond-vscode-extension/compare/0.1.0...0.1.1
-[0.1.0]: https://github.com/SUPER-SHRINE/ond-vscode-extension/releases/tag/0.1.0
-[0.1.2]: https://github.com/SUPER-SHRINE/ond-vscode-extension/compare/0.1.1...0.1.2
+<!-- 旧tagは移行先へ複製せず、公開済み版の比較リンクはread-only history repoへ向ける。 -->
+[未リリース]: https://github.com/SUPER-SHRINE/ond-vscode-extension/compare/main...develop
+[0.1.3]: https://github.com/SUPER-SHRINE/ond-vscode-extension-private-history/compare/0.1.2...0.1.3
+[0.1.2]: https://github.com/SUPER-SHRINE/ond-vscode-extension-private-history/compare/0.1.1...0.1.2
+[0.1.1]: https://github.com/SUPER-SHRINE/ond-vscode-extension-private-history/compare/0.1.0...0.1.1
+[0.1.0]: https://github.com/SUPER-SHRINE/ond-vscode-extension-private-history/releases/tag/0.1.0
