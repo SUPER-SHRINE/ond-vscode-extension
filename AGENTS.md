@@ -16,6 +16,8 @@
 
 ## Git運用
 
+- `CHANGELOG.md`のversion headingに「リリース準備中」などのstatus suffixを付けない。
+
 - `main`はrelease済みの内容を保持し、releaseごとに厳密なSemVer形式のtagを付ける。
 - 通常の開発は`develop`へ集約する。
 - 機能追加と修正は`develop`から`feature/<name>`を作り、1件ごとに`develop`向けPRを作る。
