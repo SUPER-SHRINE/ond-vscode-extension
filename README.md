@@ -19,7 +19,7 @@ Ond向けのVisual Studio Code拡張です。拡張本体はLSP clientとeditor�
 - generic型を含むmethod receiver、method call、名前付きinterfaceの補完・hover・定義移動・rename
 - 引数・receiver・local変数の型hover（generic関数の戻り値から推論した型を含む）
 - method receiverの専用highlightingと、receiver・演算子直後を含む編集中の補完
-- 型・関数・generic method・operatorの型parameter構文と、`alloc[T]`、`sizeof`、`alignof`、`trap "reason"`を含む最新Ond構文のhighlighting・診断
+- 型・関数・generic methodの型parameter構文、receiver付きoperator宣言、`alloc[T]`、`sizeof`、`alignof`、`trap "reason"`を含むOnd構文のhighlighting・診断
 - ユーザー提供のGoLand配色データを再編した`Ond Dark Theme` color theme
 
 ## 開発と配布package
