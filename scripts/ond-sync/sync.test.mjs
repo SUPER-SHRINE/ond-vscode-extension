@@ -124,18 +124,18 @@ test('locked acquisition removes the stale opposite binary and rejects extra ser
 test('online acquisition checks repository identities before release resolution without TDZ shadowing',()=>{
   const run=extensionID=>{
     const dir=mkdtempSync(join(tmpdir(),'ond-online-acquire-')),routesFile=join(dir,'routes.json'),requestsFile=join(dir,'requests.jsonl'),output=join(dir,'output'),lock=join(ROOT,LOCK_PATH);
-    const extensionAPI='https://api.github.com/repos/SUPER-SHRINE/ond-vscode-extension',ondAPI='https://api.github.com/repos/SUPER-SHRINE/ond';
+    const extensionAPI='https://api.github.com/repos/SUPER-SHRINE/ond-vscode-extension',ondAPI='https://api.github.com/repos/SUPER-SHRINE/ond',currentLock=parseLock(readFileSync(join(ROOT,LOCK_PATH),'utf8'));
     const routes={
       [ondAPI]:[{json:{id:1404563628,full_name:'SUPER-SHRINE/ond',private:true}}],
       [extensionAPI]:[{json:{id:extensionID,full_name:'SUPER-SHRINE/ond-vscode-extension',private:true}}],
-      [`${ondAPI}/releases/tags/0.1.3`]:[{status:404,json:{message:'fixture release unavailable'}}]
+      [`${ondAPI}/releases/tags/${currentLock.tag}`]:[{status:404,json:{message:'fixture release unavailable'}}]
     };
     writeFileSync(routesFile,JSON.stringify(routes));writeFileSync(requestsFile,'');
     try {
       const result=spawnSync(process.execPath,['--import',new URL('./fixtures/gate-fetch.mjs',import.meta.url).href,join(ROOT,'scripts/ond-sync/cli.mjs'),'acquire','--lock',lock,'--out',output],{encoding:'utf8',env:{...process.env,GH_TOKEN:'',GITHUB_TOKEN:'',OND_RELEASE_TOKEN:'',OND_GATE_ROUTES:routesFile,OND_GATE_REQUESTS:requestsFile}});
       assert.ifError(result.error);
       const requests=readFileSync(requestsFile,'utf8').trim().split('\n').filter(Boolean).map(line=>JSON.parse(line).address);
-      return {dir,output,result,requests,releaseURL:`${ondAPI}/releases/tags/0.1.3`};
+      return {dir,output,result,requests,releaseURL:`${ondAPI}/releases/tags/${currentLock.tag}`};
     } catch(error) {rmSync(dir,{recursive:true,force:true});throw error;}
   };
   const valid=run(1404564933);

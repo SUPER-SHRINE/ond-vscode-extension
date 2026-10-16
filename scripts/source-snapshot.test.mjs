@@ -19,7 +19,7 @@ test('exact Git objects ignore dirty index/worktree, assume/skip flags and fsmon
       for(const flag of flags)f.git(['update-index',flag,'src/main.rs']);writeFileSync(join(f.directory,'src/main.rs'),'hidden changed source');assert.equal(f.git(['status','--porcelain=v1','--untracked-files=all']),'');check();
       f.git(['update-index','--no-assume-unchanged','src/main.rs']);f.git(['update-index','--no-skip-worktree','src/main.rs']);f.git(['restore','src/main.rs']);
     }
-    const hook=join(f.directory,'.git/fsmonitor-hook');writeFileSync(hook,'#!/usr/bin/env node\nprocess.stdout.write("fixture-token\\0");\n');chmodSync(hook,0o755);f.git(['config','core.fsmonitor',hook.replace(/\\/g,'/')]);f.git(['config','core.fsmonitorHookVersion','2']);f.git(['update-index','--fsmonitor']);f.git(['update-index','--fsmonitor-valid','src/main.rs']);
+    const hook=join(f.directory,'.git/fsmonitor-hook');writeFileSync(hook,'#!/bin/sh\nprintf "fixture-token\\0"\n');chmodSync(hook,0o755);f.git(['config','core.fsmonitor',hook.replace(/\\/g,'/')]);f.git(['config','core.fsmonitorHookVersion','2']);f.git(['update-index','--fsmonitor']);f.git(['update-index','--fsmonitor-valid','src/main.rs']);
     writeFileSync(join(f.directory,'src/main.rs'),'hidden fsmonitor source');assert.equal(f.git(['status','--porcelain=v1','--untracked-files=all']),'');check();
     writeFileSync(join(f.directory,'Cargo.toml'),'not the committed manifest');check();verifySourceCommit(f.directory,f.sha);
   } finally {rmSync(f.directory,{recursive:true,force:true});}
