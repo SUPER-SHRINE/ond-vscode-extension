@@ -25,7 +25,8 @@ Language Serverは拡張に同梱されているため、利用者がRustやNode
 - 「Ond Dark Theme」配色
 
 名前変更はpackage名、import alias、組み込みsymbol、外部依存内の宣言には対応していません。\
-新しいoperator宣言形式など一部のOnd 0.2.0構文は色分けされますが、同梱Language ServerはOnd 0.1.3のため、その構文の診断や言語機能にはまだ対応していません。
+Ond 0.2.0のoperator宣言形式と型付きpointerのindex読み書きを含む言語機能に対応しています。\
+旧`load32`／`store32`呼び出しは、型付きpointerのindex読み書きへ移行してください。
 
 ## 開発
 

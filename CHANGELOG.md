@@ -7,9 +7,9 @@
 ### 変更
 
 - operator宣言の構文highlightingをreceiver付き形式へ対応
-- Ond 0.2.0の公開Release未確認のため同梱Language Serverの採用を保留し、現在の正式lockはOnd 0.1.3
+- Ond 0.2.0 Release（commit `3a146c81956994f90b84ab0673ba95ca1d5dcfcb`）を正式採用し、Windows/Linux archive、SHA-256 sidecar、manifest、binaryと公式noticeを検証し、lock SHA-256は`63e46104910baf59fbc702040e89826ec5f9bff2f39f2ac7c2d5aa23a5590a5b`
 
-### Ond 0.2.0採用後の移行
+### Ond 0.2.0への移行
 
 - operator宣言は`operator[T] [](values: *Vec[T], index: u32)`から`operator (values: *Vec[T]) [](index: u32)`へ変更
 - `load32`／`store32`の呼び出しから、型付きpointerのindex読み書きへ移行
