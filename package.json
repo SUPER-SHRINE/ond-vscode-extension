@@ -2,7 +2,7 @@
   "name": "ond-vscode-ext",
   "displayName": "Ond",
   "description": "Language support for the Ond programming language.",
-  "version": "0.1.4",
+  "version": "0.2.0",
   "publisher": "super-shrine",
   "license": "MIT",
   "icon": "icons/ond_logo.png",
