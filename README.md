@@ -41,6 +41,10 @@ npm run check
 `npm run package:release`と`npm run package:vsix`は正式配布用の処理です。\
 実際のVisual Studio Code上で統合確認する場合は`npm run test:integration`を使用します。
 
+未公開Ond sourceの確認では`npm run test:ond-source -- <Ond checkout> <commit SHA> <version>`を使用できます。\
+インストール済みVisual Studio Codeを使う場合は、実行前に`OND_LOCAL_VSCODE_EXECUTABLE`へ`Code.exe`の絶対パス、`OND_LOCAL_VSCODE_CLI`へ同じインストール内の`resources/app/out/cli.js`の絶対パスを設定します。\
+この指定は非公開source laneだけで有効です。統合確認は一時的なuser-dataと拡張機能profileを使い、通常の利用者profileには触れません。
+
 配布と同期の詳細は[固定Ond同期](docs/deterministic-ond-sync.md)、公開手順は[Marketplace公開](docs/marketplace-publishing.md)、構成は[設計](docs/architecture.md)を参照してください。
 
 ## ライセンス

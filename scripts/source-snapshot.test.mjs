@@ -7,6 +7,7 @@ import { withSourceSnapshot,verifySourceCommit } from './source-checkout.mjs';
 import { buildSourceArtifact,installedSourceToolchain,rejectAncestorCargoConfig } from './source-artifact.mjs';
 import { getPlatform } from './platform.mjs';
 import { sourceFixture,fixtureProgram } from './source-fixtures.mjs';
+import { checkServerDirectory } from './ond-sync/server.mjs';
 import { ROOT } from './ond-sync/bundle.mjs';
 
 test('exact Git objects ignore dirty index/worktree, assume/skip flags and fsmonitor',()=>{
@@ -70,6 +71,18 @@ test('private source lane blocks temporary ancestor Cargo config and resolves in
     const resolved=installedSourceToolchain({CARGO_HOME:'private'},(command,args,options)=>{calls.push([command,args,options.env]);return {status:0,stdout:join(tools,args.at(-1))+'\n'};});assert.equal(resolved.cargo,cargo);assert.equal(resolved.rustc,rustc);assert.deepEqual(calls.map(c=>c.slice(0,2)),[['rustup',['which','--toolchain','1.91.1','cargo']],['rustup',['which','--toolchain','1.91.1','rustc']]]);
     assert.throws(()=>installedSourceToolchain({},()=>({status:1,stdout:''})),/Installed Rust 1.91.1/);
   } finally {rmSync(f.directory,{recursive:true,force:true});}
+});
+test('local source lane validates notice files for the committed server version',()=>{
+  const directory=join(process.env.TEMP??process.env.TMP??'/tmp',`ond-source-server-${process.pid}-${Date.now()}`),platform=getPlatform();mkdirSync(directory);
+  try {
+    writeFileSync(join(directory,platform.binary),'local source binary');writeFileSync(join(directory,'ond-lsp.json'),'{}');
+    writeFileSync(join(directory,'THIRD-PARTY-NOTICES.txt'),'notice');writeFileSync(join(directory,'COPYRIGHT-library.html'),'<p>copyright</p>');
+    const metadata={version:'0.2.0'};
+    assert.throws(()=>checkServerDirectory(directory,platform.target),/Unexpected server files/,'the legacy default does not permit post-0.1.2 notice files');
+    assert.doesNotThrow(()=>checkServerDirectory(directory,platform.target,metadata.version));
+    rmSync(join(directory,'COPYRIGHT-library.html'));
+    assert.throws(()=>checkServerDirectory(directory,platform.target,metadata.version),/Unexpected server files/,'both notice files are required');
+  } finally {rmSync(directory,{recursive:true,force:true});}
 });
 test('snapshot Cargo build excludes ambient overrides and cleans home/output on success and failure',()=>{
   const f=sourceFixture(),platform=getPlatform(),overrides={CARGO_HOME:join(f.directory,'ambient-home'),CARGO_BUILD_TARGET:'cross',CARGO_TARGET_DIR:'stale',CARGO_BUILD_RUSTC_WRAPPER:'wrapper',CARGO_ENCODED_RUSTFLAGS:'--cfg\x1fsource_override',CARGO_ALIAS_BUILD:'unapproved',RUSTFLAGS:'--cfg source_override',RUSTDOCFLAGS:'flags',RUSTC:'unapproved',RUSTC_WRAPPER:'wrapper',RUSTC_WORKSPACE_WRAPPER:'wrapper',RUSTUP_TOOLCHAIN:'unapproved',GIT_DIR:'unapproved'},saved=new Map(Object.keys(overrides).map(key=>[key,process.env[key]]));

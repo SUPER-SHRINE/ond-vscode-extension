@@ -19,7 +19,7 @@ for (const path of [resolve(extensionRoot, "dist", "extension.js"), binaryPath, 
 
 const metadata = JSON.parse(readFileSync(metadataPath, "utf8"));
 if(process.env.OND_TEST_SOURCE_LANE==='local') {
-    checkServerDirectory(resolve(extensionRoot,"server"),platform.target);
+    checkServerDirectory(resolve(extensionRoot,"server"),platform.target,metadata.version);
     if(metadata.schemaVersion!==2||metadata.target!==platform.target||metadata.source.kind!=='local-build'||metadata.source.commit!==process.env.OND_SOURCE_SHA||metadata.version!==process.env.OND_SOURCE_VERSION) throw new Error('Local source lane provenance mismatch.');
     if(createHash('sha256').update(readFileSync(binaryPath)).digest('hex')!==metadata.sha256)throw new Error('Local binary checksum mismatch.');
 } else {
