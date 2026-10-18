@@ -16,3 +16,9 @@ export async function reconcileAssets(desired,read) {
   const states=[];for(const file of desired){const remote=await read(file.name);if(remote!==null){assert.equal(sha256(remote),sha256(file.bytes),'Existing publication differs; replacement forbidden');states.push({name:file.name,sha256:sha256(file.bytes),state:'SAME_HASH_SKIP'});}else states.push({name:file.name,sha256:sha256(file.bytes),state:'MISSING'});}
   return {state:states.every(s=>s.state==='SAME_HASH_SKIP')?'PUBLISHED_TARGETS_ALL':states.some(s=>s.state==='SAME_HASH_SKIP')?'PARTIALLY_PUBLISHED':'UNPUBLISHED',assets:states};
 }
+export async function waitForPublication(desired,read,{timeoutMs=5*60_000,intervalMs=15_000,wait=ms=>new Promise(resolve=>setTimeout(resolve,ms)),now=Date.now}={}) {
+  const deadline=now()+timeoutMs;
+  let state=await reconcileAssets(desired,read);
+  while(state.state!=='PUBLISHED_TARGETS_ALL'&&now()<deadline){await wait(Math.min(intervalMs,deadline-now()));if(now()>=deadline)break;state=await reconcileAssets(desired,read);}
+  return state;
+}

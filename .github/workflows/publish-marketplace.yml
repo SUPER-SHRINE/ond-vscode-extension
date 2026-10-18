@@ -179,7 +179,7 @@ jobs:
       matrix:
         target: [windows-x86_64, linux-x86_64]
     runs-on: windows-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     environment: visual-studio-marketplace
     permissions:
       actions: read
@@ -222,7 +222,7 @@ jobs:
           repositories: ond
           permission-contents: read
 
-      - name: 同一検証済みVSIXだけをMarketplaceへ公開
+      - name: 同一検証済みVSIXを公開しGallery反映を確認
         env:
           OND_RELEASE_TOKEN: ${{ steps.ond-token.outputs.token }}
           GITHUB_TOKEN: ${{ github.token }}
