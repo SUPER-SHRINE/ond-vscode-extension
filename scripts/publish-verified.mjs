@@ -5,7 +5,7 @@ import { join,basename,resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { ROOT } from './ond-sync/bundle.mjs';
 import { canonical,parseCanonical,parseLock,sha256,commit,version } from './ond-sync/contract.mjs';
-import { verifyCandidate,reconcileAssets } from './ond-sync/publication.mjs';
+import { verifyCandidate,reconcileAssets,waitForPublication } from './ond-sync/publication.mjs';
 import { testPolicy } from './ond-sync/test-policy.mjs';
 import { GitHub } from './ond-sync/github.mjs';
 import { materialize,verifyVisibility } from './ond-sync/release.mjs';
@@ -24,17 +24,17 @@ const {policy,digest:policySha256}=testPolicy(),targets=destination==='github'?p
 for(const t of targets){const name=`ond-vscode-extension-${tag}-${t}.vsix`,bytes=readFileSync(join(root,name)),evidence=parseCanonical(readFileSync(join(root,`${name}.verified.json`)));verifyCandidate({lock,target:t,version:tag,extensionCommit:sha,policy,policySha256,vsix:bytes,evidence});const checksum=Buffer.from(`${sha256(bytes)}  ${name}\n`);assert(readFileSync(join(root,`${name}.sha256`)).equals(checksum));desired.push({name,bytes},{name:`${name}.sha256`,bytes:checksum},{name:`${name}.verified.json`,bytes:Buffer.from(canonical(evidence))});}
 async function marketplaceBytes(name){
   const body={filters:[{criteria:[{filterType:7,value:'super-shrine.ond-vscode-ext'}],pageNumber:1,pageSize:1}],flags:1|2|16|128};
-  const response=await fetch('https://marketplace.visualstudio.com/_apis/public/gallery/extensionquery',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json;api-version=7.2-preview.1'},body:JSON.stringify(body)});assert(response.ok,'Marketplace state unavailable');const value=await response.json();assert(Array.isArray(value.results)&&value.results.length===1&&Array.isArray(value.results[0].extensions),'Marketplace state invalid');const extensions=value.results[0].extensions;assert(extensions.length<=1);
+  const response=await fetch('https://marketplace.visualstudio.com/_apis/public/gallery/extensionquery',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json;api-version=7.2-preview.1'},body:JSON.stringify(body),signal:AbortSignal.timeout(15_000)});assert(response.ok,'Marketplace state unavailable');const value=await response.json();assert(Array.isArray(value.results)&&value.results.length===1&&Array.isArray(value.results[0].extensions),'Marketplace state invalid');const extensions=value.results[0].extensions;assert(extensions.length<=1);
   if(!extensions.length)return null;assert.equal(extensions[0].publisher.publisherName,'super-shrine');assert.equal(extensions[0].extensionName,'ond-vscode-ext');assert(Array.isArray(extensions[0].versions));
   const platform=target==='linux-x86_64'?'linux-x64':'win32-x64',versions=extensions[0].versions.filter(v=>v.version===tag&&v.targetPlatform===platform);assert(versions.length<=1);if(!versions.length)return null;
-  const file=versions[0].files?.find(f=>f.assetType==='Microsoft.VisualStudio.Services.VSIXPackage');assert(file&&/^https:\/\//.test(file.source),'Existing Marketplace digest unavailable; human decision required');const download=await fetch(file.source);assert(download.ok,'Existing Marketplace package unavailable');return Buffer.from(await download.arrayBuffer());
+  const file=versions[0].files?.find(f=>f.assetType==='Microsoft.VisualStudio.Services.VSIXPackage');assert(file&&/^https:\/\//.test(file.source),'Existing Marketplace digest unavailable; human decision required');const download=await fetch(file.source,{signal:AbortSignal.timeout(15_000)});assert(download.ok,'Existing Marketplace package unavailable');return Buffer.from(await download.arrayBuffer());
 }
 if(destination==='marketplace'){
   const file=desired.find(f=>f.name.endsWith('.vsix')),state=await reconcileAssets([file],marketplaceBytes);writeFileSync(join(root,`publication-${target}.json`),canonical(state));
   if(state.assets[0].state==='MISSING'){
     const result=spawnSync(process.execPath,[join(ROOT,'node_modules/@vscode/vsce/vsce'),'publish','--azure-credential','--packagePath',join(root,file.name)],{stdio:'inherit',env:{...process.env,OND_RELEASE_TOKEN:'',GH_TOKEN:'',GITHUB_TOKEN:''}});
     if(result.error||result.status!==0)throw new Error('PARTIALLY_PUBLISHED: confirm Marketplace state before retry');
-    const confirmed=await reconcileAssets([file],marketplaceBytes);assert.equal(confirmed.state,'PUBLISHED_TARGETS_ALL','Marketplace publication not yet verifiable; retry same artifact');writeFileSync(join(root,`publication-${target}.json`),canonical(confirmed));
+    const confirmed=await waitForPublication([file],marketplaceBytes);writeFileSync(join(root,`publication-${target}.json`),canonical(confirmed));assert.equal(confirmed.state,'PUBLISHED_TARGETS_ALL','VERIFICATION_PENDING: upload was accepted but Marketplace visibility was not confirmed within five minutes; retry the same artifact');
   }
 }else{
   let release=await api.call(`/releases/tags/${tag}`,{optional:true});

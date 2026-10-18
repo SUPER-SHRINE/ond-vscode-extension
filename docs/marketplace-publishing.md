@@ -57,15 +57,21 @@ workflowがdefault branchへ入った後、「拡張を公開」を`show-identit
    成功時だけ`.vsix.verified.json`へVSIX/binary/lock/policyのdigestとcommit、host結果を記録する。
 8. environment承認後、publish jobは独立にOnd全assetを再取得・照合し、VSIX内のbinary/metadata/lockと検証証拠を照合する。
    検証済みartifactのbytesを`vsce publish --packagePath`で送り、再buildしない。
-9. 両Marketplace target成功後、GitHub Releaseへ同じVSIX・checksum・検証証拠を添付する。
+9. `vsce publish`が成功した後、公開Galleryから同じVSIXのbytesを取得できるまで最大5分待つ
+   - upload受理とGalleryでの公開確認を分け、確認できたtargetだけを成功とする
+   - 両Marketplace target成功後、GitHub Releaseへ同じVSIX・checksum・検証証拠を添付する
 
 長期PATは使用せず、Marketplaceは既存OIDC、Ond読取は既存AppのContents readです。
 Windows/Linuxごとに公開状態とdigestを記録します。既存assetのbytesが同じdigestならskip、異なれば停止します。
 GitHubのclobberは使用しません。Marketplace既存版もtarget別VSIXを取得して同一性を確認し、
 取得不能・不一致は人の判断が必要なBLOCKEDです。同名versionを自動上書きしません。
 
+uploadが受理されてもGalleryへの反映待ちで5分以内に確認できない場合、最後のGallery照合状態を保存して`VERIFICATION_PENDING`を出し、upload失敗とは扱いません。\
+Actionsの`Re-run failed jobs`（`gh run rerun <run-id> --failed`）で同じrunの失敗jobを再実行し、元のbuild artifactを使ってGalleryを照合します。\
+build artifactは7日間保持されるため、その期間内は再buildせず同じVSIXで再開できます。
+
 片方だけ成功した状態はPARTIALLY_PUBLISHEDです。同じworkflow artifactで再開し、成功済みtargetを照合して未成功だけ送ります。
-artifact失効時は再buildを別候補として両host検証・承認からやり直します。
+artifact失効後に必要となる再buildは別候補として両host検証・承認からやり直します。
 ライブ外部結果や再生成VSIXのbit一致は保証しないため、別候補で既存公開bytesと異なれば停止します。
 private source/Cargo cacheは拡張CIへ保存しません。fork PRへsecretやprivatebinaryを渡しません。
 main向けPRのexact-head実host検査と公開gate、native保護設定の管理は
