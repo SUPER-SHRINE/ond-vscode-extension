@@ -17,9 +17,14 @@ const {policy:config,digest:policySha256}=testPolicy();
 const lock=parseLock(readFileSync(join(root,"config/ond-release.lock.json")));
 const manifest = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
 const platform = getPlatform();
+const localSourceLane=process.env.OND_TEST_SOURCE_LANE==='local';
+const localExecutable=process.env.OND_LOCAL_VSCODE_EXECUTABLE;
+const localCli=process.env.OND_LOCAL_VSCODE_CLI;
+if(!localSourceLane&&(localExecutable||localCli))throw new Error('OND_LOCAL_VSCODE_EXECUTABLE and OND_LOCAL_VSCODE_CLI are only allowed in the local source lane');
+if(localSourceLane&&Boolean(localExecutable)!==Boolean(localCli))throw new Error('Set both OND_LOCAL_VSCODE_EXECUTABLE and OND_LOCAL_VSCODE_CLI');
 const metadata = JSON.parse(readFileSync(join(root, "server/ond-lsp.json"), "utf8"));
 const binary = readFileSync(join(root, "server", platform.binary));
-if(process.env.OND_TEST_SOURCE_LANE==='local') {
+if(localSourceLane) {
     if(metadata.source.kind!=='local-build'||metadata.source.commit!==process.env.OND_SOURCE_SHA||metadata.version!==process.env.OND_SOURCE_VERSION)throw new Error('Local lane exact source mismatch.');
 } else {
     const notices=requiresNotices(lock.version)?Object.fromEntries(OND_NOTICE_FILES.map(name=>[name,readFileSync(join(root,'server',name))])):undefined;
@@ -45,12 +50,29 @@ writeFileSync(join(userData, "User/settings.json"), JSON.stringify({
 }));
 writeFileSync(join(project, "ond.toml"), "");
 writeFileSync(join(project, "main.ond"), readFileSync(join(here, "hello.ond")));
-writeFileSync(join(resultRoot, "input.json"), JSON.stringify({ ...config, extensionVersion: manifest.version,
-    vsixSha256: expected, lspSha256: metadata.sha256, platform: platform.target }, null, 2));
+if(localSourceLane) {
+    writeFileSync(join(project, "test.ond"), "package main\nfunc TestOnlyHelper() {}\ntype TestOnlyType struct { TestOnlyField: u32 }\nvar TestOnlyValue: TestOnlyType\nfunc (value: TestOnlyType) testOnlyMethod() {}\nfunc TestCompletion() { TestOnlyHelper() }\n");
+    writeFileSync(join(project, "helpers_test.ond"), "package main\nfunc SuffixOnlyHelper() {}\n");
+}
 
-// runTests() adds --no-sandbox / --disable-workspace-trust. Deliberately use
-// only the official downloader, then launch the actual editor without those flags.
-const {executable,archiveSha256:vscodeArchiveSha256}=await downloadVSCode(config.vscodeVersion,platform.target,join(resultRoot,"vscode"));
+let editor;
+let vscodeArchiveSha256=null;
+const usesLocalEditor=localSourceLane&&Boolean(localExecutable);
+if(usesLocalEditor) {
+    const {inspectLocalVSCode}=await import('./local-vscode.mjs');
+    editor=inspectLocalVSCode(localExecutable,localCli);
+    editor.source='local-installed';
+} else {
+    // Release validation stays pinned to the official downloader; the source lane may also use it when no override is given.
+    const downloaded=await downloadVSCode(config.vscodeVersion,platform.target,join(resultRoot,"vscode"));
+    editor={...downloaded,version:config.vscodeVersion,source:'official-download'};
+    vscodeArchiveSha256=downloaded.archiveSha256;
+}
+const {executable,version:vscodeVersion,executableSha256:vscodeExecutableSha256,cli,cliSha256:vscodeCliSha256}=editor;
+const cliPath=usesLocalEditor?cli:join(dirname(executable),"resources/app/out/cli.js");
+writeFileSync(join(resultRoot, "input.json"), JSON.stringify({ ...config, vscodeVersion,
+    ...(usesLocalEditor?{vscode:{source:editor.source,executable,executableSha256:vscodeExecutableSha256,cli,cliSha256:vscodeCliSha256}}:{}),
+    extensionVersion: manifest.version, vsixSha256: expected, lspSha256: metadata.sha256, platform: platform.target }, null, 2));
 async function execute(args, label, env = {}, timeout = 120_000) {
     const log = createWriteStream(join(resultRoot, `${label}.log`));
     return await new Promise((resolveRun, reject) => {
@@ -69,7 +91,7 @@ async function execute(args, label, env = {}, timeout = 120_000) {
 }
 const profileArgs = [`--user-data-dir=${userData}`, `--extensions-dir=${extensions}`];
 // Same node-mode CLI entrypoint as the official bin/code and bin/code.cmd.
-await execute([join(dirname(executable), "resources/app/out/cli.js"), ...profileArgs,
+await execute([cliPath, ...profileArgs,
     "--install-extension", vsix], "install", { ELECTRON_RUN_AS_NODE: "1" });
 // 通常起動の信頼ダイアログで、この実行が作成したfixtureだけを信頼する。
 // テスト起動ではVS Code自身がdialogを抑止するため、先に通常UIを操作する。
@@ -85,7 +107,7 @@ preparation.catch(() => {});
 let socket;
 try {
     let page;
-    for (let attempt = 0; attempt < 120; attempt++) {
+    for (let attempt = 0; attempt < (localSourceLane ? 20 : 120); attempt++) {
         const pages = await fetch(`http://127.0.0.1:${debugPort}/json/list`).then(r => r.json()).catch(() => []);
         page = pages.find(item => item.type === "page" && item.url.includes("workbench"));
         if (page) break;
@@ -107,7 +129,7 @@ try {
         socket.addEventListener("message", listener); socket.send(JSON.stringify({ id, method, params }));
     });
     let accepted = false;
-    for (let attempt = 0; attempt < 120; attempt++) {
+    for (let attempt = 0; attempt < (localSourceLane ? 20 : 120); attempt++) {
         const result = await call("Runtime.evaluate", { expression: `(() => {
             const button = [...document.querySelectorAll('a.monaco-button, button')]
                 .find(b => b.textContent.includes('Yes, I trust the authors'));
@@ -117,10 +139,13 @@ try {
         if (result.result.value) { accepted = true; break; }
         await new Promise(r => setTimeout(r, 250));
     }
-    if (!accepted) throw new Error("Trust preparation: expected normal trust confirmation was not found.");
-    writeFileSync(join(resultRoot, "trust.json"), JSON.stringify({ project, method: "normal-editor-trust-dialog", accepted }, null, 2));
-    // Allow scoped trust persistence before normal editor shutdown.
-    await new Promise(r => setTimeout(r, 1500));
+    if (!accepted && !localSourceLane) throw new Error("Trust preparation: expected normal trust confirmation was not found.");
+    writeFileSync(join(resultRoot, "trust.json"), JSON.stringify({
+        project,
+        method: accepted ? "normal-editor-trust-dialog" : "existing-workspace-trust-checked-by-host",
+        accepted
+    }, null, 2));
+    if (accepted) await new Promise(r => setTimeout(r, 1500));
     await call("Runtime.evaluate", { expression: "setTimeout(() => window.close(), 100)" });
 } finally { socket?.close(); }
 await preparation;
@@ -129,11 +154,14 @@ for (const run of [1, 2]) {
         "--skip-welcome", "--skip-release-notes",
         "--new-window", project], `editor-${run}`, {
         OND_TEST_ROOT: resultRoot, OND_HOST_RUN: String(run),
-        OND_EXPECTED_LSP_SHA256: metadata.sha256, OND_EXPECTED_EXTENSION_VERSION: manifest.version
+        OND_EXPECTED_LSP_SHA256: metadata.sha256, OND_EXPECTED_EXTENSION_VERSION: manifest.version,
+        OND_EXPECTED_VSCODE_VERSION: vscodeVersion
     });
     const result = JSON.parse(readFileSync(join(resultRoot, `host-results-${run}.json`), "utf8"));
-    if (!result.success || result.vscode !== config.vscodeVersion) throw new Error("Extension host did not report successful tests.");
+    if (!result.success || result.vscode !== vscodeVersion) throw new Error("Extension host did not report successful tests.");
 }
 if(sha256(readFileSync(vsix))!==expected)throw new Error('Tested VSIX changed during host tests');
-if(process.env.OND_TEST_SOURCE_LANE!=='local')writeFileSync(`${vsix}.verified.json`,canonical({schemaVersion:1,extensionCommit,headCommit:process.env.OND_EXPECTED_HEAD_SHA||extensionCommit,baseCommit:process.env.OND_EXPECTED_BASE_SHA||extensionCommit,extensionVersion:manifest.version,target:platform.target,vsixSha256:expected,lockSha256:sha256(canonical(lock)),binarySha256:metadata.sha256,policySha256,vscodeVersion:config.vscodeVersion,vscodeArchiveSha256,hostRuns:[1,2].map(run=>JSON.parse(readFileSync(join(resultRoot,`host-results-${run}.json`),'utf8')))}));
+const hostRuns=[1,2].map(run=>JSON.parse(readFileSync(join(resultRoot,`host-results-${run}.json`),'utf8')));
+if(localSourceLane)writeFileSync(join(resultRoot,'local-evidence.json'),canonical({schemaVersion:1,extensionCommit,extensionVersion:manifest.version,target:platform.target,vsixSha256:expected,binarySha256:metadata.sha256,vscode:{source:editor.source,executable,version:vscodeVersion,...(usesLocalEditor?{executableSha256:vscodeExecutableSha256,cli,cliSha256:vscodeCliSha256}:{archiveSha256:vscodeArchiveSha256})},hostRuns}));
+else writeFileSync(`${vsix}.verified.json`,canonical({schemaVersion:1,extensionCommit,headCommit:process.env.OND_EXPECTED_HEAD_SHA||extensionCommit,baseCommit:process.env.OND_EXPECTED_BASE_SHA||extensionCommit,extensionVersion:manifest.version,target:platform.target,vsixSha256:expected,lockSha256:sha256(canonical(lock)),binarySha256:metadata.sha256,policySha256,vscodeVersion:config.vscodeVersion,vscodeArchiveSha256,hostRuns}));
 console.log(`Two real VS Code extension-host runs passed. Evidence: ${resultRoot}`);

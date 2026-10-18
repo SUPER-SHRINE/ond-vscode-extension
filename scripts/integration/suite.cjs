@@ -44,6 +44,21 @@ exports.run = async () => {
     const completions=await vscode.commands.executeCommand('vscode.executeCompletionItemProvider',uri,new vscode.Position(line,column+3));
     const labels=completions?.items.map(i=>typeof i.label==='string'?i.label:i.label.label)||[];
     assert(labels.includes('sumTo'),'sumTo completion missing');record('completion_sumTo',true);
+    if(process.env.OND_TEST_SOURCE_LANE==='local') {
+      const mainCandidates=await vscode.commands.executeCommand('vscode.executeCompletionItemProvider',uri,new vscode.Position(original.split('\n').findIndex(l=>l.includes('var answer')),4));
+      const mainLabels=mainCandidates?.items.map(i=>typeof i.label==='string'?i.label:i.label.label)||[];
+      for(const hidden of ['TestOnlyHelper','TestOnlyType','TestOnlyValue','SuffixOnlyHelper'])assert(!mainLabels.includes(hidden),`test-only declaration leaked into main.ond completion: ${hidden}`);
+      record('completion_test_sources_hidden',true);
+      const testUri=vscode.Uri.file(path.join(root,'project/test.ond'));
+      const testDoc=await vscode.workspace.openTextDocument(testUri);
+      await vscode.window.showTextDocument(testDoc);
+      const testSource=testDoc.getText(),testLine=testSource.split('\n').findIndex(l=>l.includes('TestOnlyHelper() }'));
+      const testColumn=testSource.split('\n')[testLine].indexOf('TestOnlyHelper');
+      const testCompletions=await vscode.commands.executeCommand('vscode.executeCompletionItemProvider',testUri,new vscode.Position(testLine,testColumn));
+      const testLabels=testCompletions?.items.map(i=>typeof i.label==='string'?i.label:i.label.label)||[];
+      for(const expected of ['sumTo','TestOnlyHelper','TestOnlyType','TestOnlyValue','SuffixOnlyHelper'])assert(testLabels.includes(expected),`test.ond completion missing ${expected}`);
+      record('completion_test_sources_visible',true);
+    }
     const hover=await vscode.commands.executeCommand('vscode.executeHoverProvider',uri,new vscode.Position(line,column+1));
     assert(hover?.length);record('hover',hover.length);
     const edit = async text => {
