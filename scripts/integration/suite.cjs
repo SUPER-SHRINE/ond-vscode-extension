@@ -45,6 +45,65 @@ exports.run = async () => {
     const labels=completions?.items.map(i=>typeof i.label==='string'?i.label:i.label.label)||[];
     assert(labels.includes('sumTo'),'sumTo completion missing');record('completion_sumTo',true);
     if(process.env.OND_TEST_SOURCE_LANE==='local') {
+      const compatUri=vscode.Uri.file(path.join(root,'project/compatibility.ond'));
+      const compatDoc=await vscode.workspace.openTextDocument(compatUri);
+      await vscode.window.showTextDocument(compatDoc);
+      const compatSymbols=await until(async()=>{
+        const items=await vscode.commands.executeCommand('vscode.executeDocumentSymbolProvider',compatUri);
+        const flatten=nodes=>(nodes||[]).flatMap(item=>[item,...flatten(item.children)]);
+        const names=flatten(items).map(item=>item.name);
+        return names.includes('interface')&&names.includes('UseImports')?names:null;
+      },'develop compatibility symbols');
+      await until(()=>vscode.languages.getDiagnostics(compatUri).filter(d=>d.severity===0).length===0,'develop compatibility diagnostics');
+      record('develop_compatibility_source',{symbols:compatSymbols,errors:0});
+      const compatText=compatDoc.getText();
+      const completionOffset=compatText.indexOf('math.Add')+'math.'.length;
+      const importedCompletions=await until(async()=>{
+        const result=await vscode.commands.executeCommand('vscode.executeCompletionItemProvider',compatUri,compatDoc.positionAt(completionOffset));
+        const labels=result?.items.map(i=>typeof i.label==='string'?i.label:i.label.label)||[];
+        return labels.includes('Add')?labels:null;
+      },'qualified internal import completion');
+      record('completion_qualified_import',importedCompletions.includes('Add'));
+      const locationPaths=async offset=>{
+        const locations=await vscode.commands.executeCommand('vscode.executeDefinitionProvider',compatUri,compatDoc.positionAt(offset));
+        return (locations||[]).map(location=>location.targetUri?.fsPath||location.uri?.fsPath).filter(Boolean);
+      };
+      const addOffset=compatText.indexOf('math.Add')+'math.'.length;
+      const internalTargets=await until(async()=>{
+        const paths=await locationPaths(addOffset);
+        return paths.some(file=>file.endsWith(path.join('math','math.ond')))?paths:null;
+      },'qualified internal import definition');
+      const sharedOffset=compatText.indexOf('shared.SharedFunction')+'shared.'.length;
+      const dependencyTargets=await until(async()=>{
+        const paths=await locationPaths(sharedOffset);
+        return paths.some(file=>file.endsWith(path.join('library','shared.ond')))?paths:null;
+      },'library root import definition');
+      record('definition_qualified_imports',{internal:internalTargets,dependency:dependencyTargets});
+      const editCompat=async text=>{
+        const change=new vscode.WorkspaceEdit();change.replace(compatUri,new vscode.Range(compatDoc.positionAt(0),compatDoc.positionAt(compatDoc.getText().length)),text);
+        assert(await vscode.workspace.applyEdit(change));await compatDoc.save();
+      };
+      try {
+        await editCompat(compatText.replace('import "hostapp/math"','import "math"'));
+        await wait(1500);
+        await until(()=>vscode.languages.getDiagnostics(compatUri).some(d=>d.severity===0),'unqualified internal import diagnostic');
+        record('unqualified_internal_import_rejected',true);
+        await editCompat(compatText);
+        await wait(1500);
+        await until(()=>vscode.languages.getDiagnostics(compatUri).filter(d=>d.severity===0).length===0,'unqualified internal import cleared');
+        record('unqualified_internal_import_cleared',true);
+        const invalidCompat=compatText.replace('func interface() {}','type Legacy interface {}');
+        await editCompat(invalidCompat);
+        await wait(1500);
+        await until(()=>vscode.languages.getDiagnostics(compatUri).some(d=>d.severity===0),'obsolete interface declaration diagnostic');
+        record('obsolete_interface_declaration_rejected',true);
+        await editCompat(compatText);
+        await wait(1500);
+        await until(()=>vscode.languages.getDiagnostics(compatUri).filter(d=>d.severity===0).length===0,'obsolete interface declaration cleared');
+        record('obsolete_interface_declaration_cleared',true);
+      } finally {
+        if(compatDoc.getText()!==compatText)await editCompat(compatText);
+      }
       const mainCandidates=await vscode.commands.executeCommand('vscode.executeCompletionItemProvider',uri,new vscode.Position(original.split('\n').findIndex(l=>l.includes('var answer')),4));
       const mainLabels=mainCandidates?.items.map(i=>typeof i.label==='string'?i.label:i.label.label)||[];
       for(const hidden of ['TestOnlyHelper','TestOnlyType','TestOnlyValue','SuffixOnlyHelper'])assert(!mainLabels.includes(hidden),`test-only declaration leaked into main.ond completion: ${hidden}`);

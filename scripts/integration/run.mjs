@@ -48,9 +48,17 @@ writeFileSync(join(userData, "User/settings.json"), JSON.stringify({
     "extensions.autoUpdate": false, "extensions.autoCheckUpdates": false,
     "workbench.startupEditor": "none"
 }));
-writeFileSync(join(project, "ond.toml"), "");
+writeFileSync(join(project, "ond.toml"), '[project]\nname = "hostapp"\n');
 writeFileSync(join(project, "main.ond"), readFileSync(join(here, "hello.ond")));
 if(localSourceLane) {
+    const library = join(resultRoot, "library");
+    mkdirSync(join(project, "math"), { recursive: true });
+    mkdirSync(library);
+    writeFileSync(join(project, "ond.toml"), '[project]\nname = "hostapp"\n\n[dependencies]\nlocal_library = { path = "../library" }\n');
+    writeFileSync(join(project, "math", "math.ond"), "package math\nfunc Add(left: u32, right: u32) -> u32 { return left + right }\n");
+    writeFileSync(join(library, "ond.toml"), '[project]\nname = "shared"\n');
+    writeFileSync(join(library, "shared.ond"), "package shared\nfunc SharedFunction() -> u32 { return 1 }\n");
+    writeFileSync(join(project, "compatibility.ond"), 'package main\nimport "hostapp/math"\nimport "shared"\nfunc interface() {}\nfunc UseImports() { _ = math.Add(1 as u32, 2 as u32); _ = shared.SharedFunction() }\n');
     writeFileSync(join(project, "test.ond"), "package main\nfunc TestOnlyHelper() {}\ntype TestOnlyType struct { TestOnlyField: u32 }\nvar TestOnlyValue: TestOnlyType\nfunc (value: TestOnlyType) testOnlyMethod() {}\nfunc TestCompletion() { TestOnlyHelper() }\n");
     writeFileSync(join(project, "helpers_test.ond"), "package main\nfunc SuffixOnlyHelper() {}\n");
 }

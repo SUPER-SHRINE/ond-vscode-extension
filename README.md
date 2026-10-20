@@ -42,6 +42,11 @@ npm run check
 実際のVisual Studio Code上で統合確認する場合は`npm run test:integration`を使用します。
 
 未公開Ond sourceの確認では`npm run test:ond-source -- <Ond checkout> <commit SHA> <version>`を使用できます。\
+Ond developの言語変更を確認するときは、対象commitのSHAとbuild versionを指定してください。\
+この確認では`interface`識別子、`[project].name`、project名を含むimport path、およびlibrary root importを検査します。\
+依存packageは`ond.toml`の`[dependencies]`へ登録し、importには依存先のproject名を使います。\
+Ond developでは`OND_PATH`環境変数と`--library-dir` optionによる依存指定を使いません。\
+正式配布用lockはOnd 0.2.0を固定しているため、配布VSIXのLanguage Serverはdevelopの変更を含みません。\
 インストール済みVisual Studio Codeを使う場合は、実行前に`OND_LOCAL_VSCODE_EXECUTABLE`へ`Code.exe`の絶対パス、`OND_LOCAL_VSCODE_CLI`へ同じインストール内の`resources/app/out/cli.js`の絶対パスを設定します。\
 この指定は非公開source laneだけで有効です。統合確認は一時的なuser-dataと拡張機能profileを使い、通常の利用者profileには触れません。
 
