@@ -45,7 +45,7 @@
         },
         {
           "name": "support.function.builtin.ond",
-          "match": "\\b(?:alignof|free|len|load32|new|sizeof|store32|thisFile|thisLine)(?=\\s*\\()"
+          "match": "\\b(?:alignof|free|len|new|sizeof|thisFile|thisLine)(?=\\s*\\()"
         }
       ]
     },
@@ -118,7 +118,7 @@
         },
         {
           "name": "storage.type.declaration.ond",
-          "match": "\\b(?:const|func|interface|struct|type|var)\\b"
+          "match": "\\b(?:const|func|struct|type|var)\\b"
         }
       ]
     },

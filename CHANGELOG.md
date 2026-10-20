@@ -2,6 +2,21 @@
 
 この文書では、Ond VS Code Extensionの利用者向け変更を記録します。
 
+## 未リリース
+
+### 変更
+
+- `interface`と廃止済み`load32`／`store32`をkeyword・builtinとして色分けしないよう修正
+- Ond developで必須になった`[project].name`とproject名を含むimport pathに対応
+- 依存packageを`ond.toml`の`[dependencies]`に登録する方式へ移行
+- library root packageをproject名でimportする構成をlocal source laneで確認
+
+### 移行
+
+- interface型を具体型や関数型へ移行し、同じ綴りを使う名前は通常のidentifierとして扱う
+- `ond.toml`へ`[project].name`を追加し、importを`project名/相対directory`形式へ変更
+- `OND_PATH`と`--library-dir`による依存指定を`[dependencies]`へ移行
+
 ## 0.2.0
 
 ### 変更
