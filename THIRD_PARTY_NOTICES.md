@@ -1,8 +1,8 @@
 # Third-party software notices
 
-This extension distributes `ond-lsp` 0.2.0 and bundles the following runtime packages into `dist/extension.js`. Their licenses and copyright notices are reproduced below. This notice is included in the VSIX as `extension/THIRD_PARTY_NOTICES.md`.
+This extension distributes `ond-lsp` 0.3.0 and bundles the following runtime packages into `dist/extension.js`. Their licenses and copyright notices are reproduced below. This notice is included in the VSIX as `extension/THIRD_PARTY_NOTICES.md`.
 
-## Ond Language Server 0.2.0
+## Ond Language Server 0.3.0
 
 MIT License
 
