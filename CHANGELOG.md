@@ -2,19 +2,21 @@
 
 この文書では、Ond VS Code Extensionの利用者向け変更を記録します。
 
-## 未リリース
+## 0.3.0
 
 ### 変更
 
+- Ond 0.3.0を正式採用し、commit `42b53d454de7b6f6dd28fbbb5432a497a384358d`とlock SHA-256 `312fa106f0c3a99c66610e017d17ccfb2167e23109f7b9265ce666042320d38b`を固定
+- test fileを識別し、ローカルVS Code統合検証でtest宣言の補完を確認
+- Marketplaceへの公開後、公開されたVSIXを取得して生成物との一致を検証するまで待機
 - `interface`と廃止済み`load32`／`store32`をkeyword・builtinとして色分けしないよう修正
-- Ond developで必須になった`[project].name`とproject名を含むimport pathに対応
-- 依存packageを`ond.toml`の`[dependencies]`に登録する方式へ移行
-- library root packageをproject名でimportする構成をlocal source laneで確認
+- `[project].name`とproject名を含むimport path、`[dependencies]`による依存登録へ対応
+- library root packageをproject名でimportする構成をlocal source検証に追加
 
 ### 移行
 
-- interface型を具体型や関数型へ移行し、同じ綴りを使う名前は通常のidentifierとして扱う
-- `ond.toml`へ`[project].name`を追加し、importを`project名/相対directory`形式へ変更
+- interface型を具体型やfunction pointerへ移行し、同じ綴りの名前は通常のidentifierとして扱う
+- `ond.toml`へ`[project].name`を追加し、importをproject名から始まるpathへ変更
 - `OND_PATH`と`--library-dir`による依存指定を`[dependencies]`へ移行
 
 ## 0.2.0
