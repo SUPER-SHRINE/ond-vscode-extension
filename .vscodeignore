@@ -41,6 +41,7 @@ dist/client.js
 
 .integration/**
 .vscode-test/**
+.worktrees/**
 
 *.vsix.verified.json
 candidate.lock.json
