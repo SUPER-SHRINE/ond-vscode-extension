@@ -3,6 +3,7 @@ dist/
 server/
 *.vsix
 *.vsix.sha256
+*.vsix.verified.json
 
 # Local credentials and authentication state
 **/.env
