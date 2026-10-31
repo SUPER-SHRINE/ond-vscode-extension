@@ -95,6 +95,32 @@ test("keeps the current declarations and builtin set", () => {
     check("load32(0); store32(0, 1); sizeof(u32)", [[0, "load32", call], [0, "store32", call], [0, "sizeof", "support.function.builtin.ond"]]);
 });
 
+test("highlights complete integer literals in Ond expressions", () => {
+    const valid = ["0xFF", "0Xff", "0b1010", "0B1010", "0o755", "0O755", "0x_FF", "0b_101", "0o_17", "0755", "0_600", "1_000", "0", "42"];
+    const source = `func values() { var value: u32 = ${valid.join(" + ")}; }`;
+    const tokens = tokenize([source])[0];
+    let cursor = source.indexOf("= ") + 2;
+    for (const literal of valid) {
+        const column = source.indexOf(literal, cursor);
+        assert(column >= 0, `missing fixture literal ${literal}`);
+        for (let offset = 0; offset < literal.length; offset++) {
+            assert(tokens[column + offset].includes("constant.numeric.integer.ond"), `${literal} was not fully highlighted`);
+        }
+        cursor = column + literal.length;
+    }
+    check("var 日本0xFF: u32 = 0xFF; var text: string = \"0o755\"", [
+        [0, "0xFF", "!constant.numeric.integer.ond"],
+        [0, "0xFF", "constant.numeric.integer.ond", 1],
+        [0, "0o755", "!constant.numeric.integer.ond"],
+    ]);
+    for (const invalid of ["0x", "0b_", "0o__7", "1_", "1__0"]) {
+        const result = tokenize([`var value: u32 = ${invalid};`])[0];
+        const column = `var value: u32 = ${invalid};`.indexOf(invalid);
+        assert(!result.slice(column, column + invalid.length).every(scopes => scopes.includes("constant.numeric.integer.ond")), `${invalid} was fully highlighted`);
+    }
+    check("var ratio: f32 = 1.25", [[0, "1.25", "constant.numeric.float.ond"]]);
+});
+
 test("preserves builtin and control precedence in root, role, and nested blocks", () => {
     for (const prefix of ["", "role Debug { ", "role Debug { if true { "]) {
         check(`${prefix}sizeof(u32); alloc[u32](1); if (true) {}`, [
