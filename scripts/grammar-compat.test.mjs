@@ -7,7 +7,7 @@ const grammar = JSON.parse(readFileSync(new URL("../syntaxes/ond.tmLanguage.json
 // Exercise ordered rules and begin/end state across lines without adding a test dependency.
 // The grammar's regex subset is shared by JavaScript and Oniguruma; native TextMate QA
 // separately checks the editor engine. This runner intentionally covers no other syntax.
-function tokenize(source, root = grammar) {
+function tokenize(source, root = grammar, states) {
     const frames = [{ rule: root }];
     function* expand(patterns) {
         for (const rule of patterns ?? []) {
@@ -62,6 +62,7 @@ function tokenize(source, root = grammar) {
             assert(match[0].length || kind !== "match", "empty match rules must make progress");
             offset = match.index + match[0].length;
         }
+        states?.push(frames.length);
         return result;
     });
 }
@@ -180,4 +181,116 @@ test("binding comments are whitespace and RHS comparisons stay ordinary", () => 
         [2, "r2", register], [3, "ADD", keyword],
     ]);
     check(["asm(r1 <- value +", " r1<-rhs) { ADD r2,r1,r0,0 }"], [[1, "r1", "!variable.other.readwrite.ond"], [1, "ADD", keyword]]);
+});
+
+test("ordinary role variables keep conversion and subsequent declarations", () => {
+    for (const separator of [" ", " /* conversion */ "]) {
+        check(["var role: u8 = 1", "var converted: u32 = role" + separator + "as u32", "var next: u32 = sizeof(u32)"], [
+            [1, "role", null], [1, "as", "keyword.operator.word.ond"],
+            [2, "var", "storage.type.declaration.ond"], [2, "sizeof", "support.function.builtin.ond"],
+        ]);
+    }
+    check("role asMode { var value: u32 = 1 }", [[0, "role", keyword], [0, "asMode", type]]);
+});
+
+test("ordinary asm calls close before an independent block", () => {
+    for (const prefix of ["", "_ = "]) {
+        for (const args of ["()", "(1)", "(value, nested(1))", "(/* ordinary */ 1)", "(\n 1)", "(\n value, nested(1))", "(\n /* ordinary */ 1)"]) {
+            const callLines = (prefix + "asm" + args).split("\n");
+            // Ordinary arguments resolve the prefix as a call. No provisional frame
+            // may remain after its closing parenthesis to capture a later block.
+            const states = [];
+            tokenize(callLines, grammar, states);
+            assert.equal(states.at(-1), 1, `ordinary call left an open grammar frame: ${callLines}`);
+            const block = callLines.length;
+            check([...callLines, "/* independent block */", "{ var ADD: u32 = sizeof(u32) }", "if true { var next: u32 = 1 }"], [
+                [0, "asm", call], [block + 1, "var", "storage.type.declaration.ond"],
+                [block + 1, "sizeof", "support.function.builtin.ond"], [block + 1, "ADD", null], [block + 2, "if", "keyword.control.ond"],
+            ]);
+        }
+    }
+});
+
+test("empty multiline asm bindings enter a same-line body after the closing parenthesis", () => {
+    for (const close of [") { ADD r2,r1,r0,0 }", ") /* body */ { ADD r2,r1,r0,0 }"]) {
+        check(["asm(", " /* empty bindings */", close, "var next: u32 = sizeof(u32)"], [
+            [0, "asm", call], [2, "ADD", keyword], [2, "r2", register],
+            [3, "var", "storage.type.declaration.ond"], [3, "sizeof", "support.function.builtin.ond"],
+        ]);
+    }
+});
+
+test("asm comparisons in member and expression calls do not create assembly state", () => {
+    for (const callee of ["obj.asm", "obj . asm", "obj. asm", "_ = asm", "return asm"]) {
+        for (const args of ["(r1<-rhs)", "(\n r1<-rhs)", "(/* input */ r1<-rhs)"]) {
+            const source = (callee + args).split("\n");
+            const states = [];
+            tokenize(source, grammar, states);
+            assert.equal(states.at(-1), 1, "expression call left an open grammar frame: " + source);
+            check([...source, "{ var ADD: u32 = sizeof(u32) }"], [
+                [source.length - 1, "r1", "!variable.other.readwrite.ond"],
+                [source.length, "var", "storage.type.declaration.ond"],
+                [source.length, "sizeof", "support.function.builtin.ond"], [source.length, "ADD", null],
+            ]);
+        }
+    }
+    for (const source of ["asm { ADD r2,r1,r0,0 }", "func f() { asm { ADD r2,r1,r0,0 } }", "var x: u32 = 1; asm { ADD r2,r1,r0,0 }"]) {
+        check(source, [[0, "asm", keyword], [0, "ADD", keyword], [0, "r2", register]]);
+    }
+});
+
+test("statement comments preserve asm promotion without opening expression contexts", () => {
+    for (const source of [
+        ["func f() { /* comment */ asm(r1 <- value) { ADD r2,r1,r0,0 } }"],
+        ["func f() {/*comment*/asm(r1 <- value) { ADD r2,r1,r0,0 } }"],
+        ["role Debug {/*comment*/asm(r1 <- value) { ADD r2,r1,r0,0 } }"],
+        ["var x: u32 = 1;/*comment*/asm(r1 <- value) { ADD r2,r1,r0,0 }"],
+        ["/* comment */ asm(", " r1 <- value,", ") { ADD r2,r1,r0,0 }"],
+        ["func f() { /* spanning", " comment */ asm(r1 <- value) { ADD r2,r1,r0,0 } }"],
+        ["/* spanning", " comment */ asm(", " r1 <- value,", ") { ADD r2,r1,r0,0 }"],
+        ["// statement comment", "asm(r1 <- value) { ADD r2,r1,r0,0 }"],
+    ]) {
+        const body = source.findIndex(line => line.includes("ADD"));
+        check([...source, "var next: u32 = sizeof(u32)"], [
+            [body, "ADD", keyword], [body, "r2", register],
+            [source.length, "var", "storage.type.declaration.ond"], [source.length, "sizeof", "support.function.builtin.ond"],
+        ]);
+    }
+    for (const source of [
+        ["_ = /*comment*/ asm(r1<-rhs)"],
+        ["obj./*comment*/asm(r1<-rhs)"],
+        ["_ = /* spanning", " comment */ asm(r1<-rhs)"],
+        ["obj./* spanning", " comment */asm(r1<-rhs)"],
+        ["/* statement comment */ _ = asm(r1<-rhs)"],
+    ]) {
+        const states = [];
+        tokenize(source, grammar, states);
+        assert.equal(states.at(-1), 1, "ordinary commented call left an open grammar frame");
+        check([...source, "{ var ADD: u32 = sizeof(u32) }"], [
+            [source.length - 1, "r1", "!variable.other.readwrite.ond"],
+            [source.length, "ADD", null], [source.length, "sizeof", "support.function.builtin.ond"],
+        ]);
+    }
+});
+
+test("comments inside an ambiguous asm argument list wait for a real binding", () => {
+    for (const source of [
+        ["asm( /* call comment", " */ 1)"],
+        ["asm( // call comment", " 1)"],
+    ]) {
+        const states = [];
+        tokenize(source, grammar, states);
+        assert.equal(states.at(-1), 1, "ordinary commented argument left an open grammar frame");
+        check([...source, "{ var ADD: u32 = sizeof(u32) }"], [
+            [0, "asm", call], [1, "1", "constant.numeric.integer.ond"],
+            [source.length, "ADD", null], [source.length, "var", "storage.type.declaration.ond"],
+            [source.length, "sizeof", "support.function.builtin.ond"],
+        ]);
+    }
+    for (const source of [
+        ["asm( /* binding comment", " */ r1 <- value) { ADD r2,r1,r0,0 }"],
+        ["asm( // binding comment", " r1 <- value) { ADD r2,r1,r0,0 }"],
+    ]) {
+        check(source, [[0, "asm", call], [1, "r1", register], [1, "ADD", keyword], [1, "r2", register]]);
+    }
 });

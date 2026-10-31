@@ -3,6 +3,9 @@
   "scopeName": "source.ond",
   "patterns": [
     {
+      "include": "#asm-statement"
+    },
+    {
       "include": "#comments"
     },
     {
@@ -10,12 +13,6 @@
     },
     {
       "include": "#role-block"
-    },
-    {
-      "include": "#asm-block"
-    },
-    {
-      "include": "#asm-provisional"
     },
     {
       "include": "#strings"
@@ -124,7 +121,7 @@
     },
     "role-block": {
       "name": "meta.role.ond",
-      "begin": "(\\brole\\b)(?=(?:\\s|/\\*(?:[^*]|\\*(?!/))*\\*/)+(?:[\\p{L}_]|/\\*(?:(?!\\*/).)*$|//.*$))",
+      "begin": "(\\brole\\b)(?=(?:\\s|/\\*(?:[^*]|\\*(?!/))*\\*/)+(?:(?!(?:package|import|const|var|type|func|struct|return|defer|break|continue|if|else|for|true|false|nil|as|new)(?![\\p{L}\\p{Nd}_]))[\\p{L}_]|/\\*(?:(?!\\*/).)*$|//.*$))",
       "beginCaptures": {
         "0": {
           "name": "meta.role.header.ond"
@@ -133,7 +130,7 @@
           "name": "keyword.other.ond"
         }
       },
-      "end": "(?<=\\})",
+      "end": "(?<=\\})|(?=(?:package|import|const|var|type|func|struct|return|defer|break|continue|if|else|for|true|false|nil|as|new)(?![\\p{L}\\p{Nd}_]))",
       "patterns": [
         {
           "include": "#comments"
@@ -157,9 +154,6 @@
       "end": "\\}",
       "patterns": [
         {
-          "include": "#comments"
-        },
-        {
           "include": "#ond-block"
         },
         {
@@ -168,7 +162,7 @@
       ]
     },
     "asm-block": {
-      "begin": "\\basm\\b(?=(?:\\s|/\\*(?:[^*]|\\*(?!/))*\\*/)*(?:noreturn\\b|\\{|\\((?:\\s|/\\*(?:[^*]|\\*(?!/))*\\*/)*(?:r(?:1[0-5]|[0-9])\\b(?:\\s|/\\*(?:[^*]|\\*(?!/))*\\*/)*(?:<->|<-|->)|\\)(?:\\s|/\\*(?:[^*]|\\*(?!/))*\\*/)*\\{|/\\*(?:(?!\\*/).)*$|//.*$)|/\\*(?:(?!\\*/).)*$|//.*$))",
+      "begin": "\\basm\\b(?=(?:\\s|/\\*(?:[^*]|\\*(?!/))*\\*/)*(?:noreturn\\b|\\{|\\((?:\\s|/\\*(?:[^*]|\\*(?!/))*\\*/)*(?:r(?:1[0-5]|[0-9])\\b(?:\\s|/\\*(?:[^*]|\\*(?!/))*\\*/)*(?:<->|<-|->)|\\)(?:\\s|/\\*(?:[^*]|\\*(?!/))*\\*/)*\\{)|/\\*(?:(?!\\*/).)*$|//.*$))",
       "beginCaptures": {
         "0": {
           "name": "keyword.other.ond"
@@ -349,31 +343,53 @@
       ]
     },
     "asm-provisional": {
-      "begin": "(?<!\\.)\\basm\\b(?=(?:\\s|/\\*(?:[^*]|\\*(?!/))*\\*/)*\\()",
+      "begin": "(\\basm\\b)((?:\\s|/\\*(?:[^*]|\\*(?!/))*\\*/)*)(\\()",
       "beginCaptures": {
-        "0": {
+        "1": {
           "name": "entity.name.function.call.ond"
+        },
+        "2": {
+          "patterns": [
+            {
+              "include": "#comments"
+            }
+          ]
+        },
+        "3": {
+          "name": "punctuation.section.parens.ond"
         }
       },
-      "end": "(?<=\\})|(?=\\S)(?!noreturn\\b|\\(|\\{|/\\*|//)",
+      "end": "\\)(?!(?:\\s|/\\*(?:[^*]|\\*(?!/))*\\*/)*\\{)|(?<=\\})|(?=\\S)(?!r(?:1[0-5]|[0-9])\\b(?:\\s|/\\*(?:[^*]|\\*(?!/))*\\*/)*(?:<->|<-|->)|\\)(?:\\s|/\\*(?:[^*]|\\*(?!/))*\\*/)*\\{|/\\*|//)",
       "patterns": [
         {
           "include": "#comments"
         },
         {
-          "name": "meta.function-call.arguments.ond",
-          "begin": "\\(",
-          "end": "\\)",
-          "patterns": [
-            {
-              "include": "#asm-parameters"
-            }
-          ]
+          "include": "#asm-confirmed-header"
         },
         {
-          "include": "#asm-body"
+          "begin": "\\)(?=(?:\\s|/\\*(?:[^*]|\\*(?!/))*\\*/)*\\{)",
+          "beginCaptures": {
+            "0": {
+              "name": "punctuation.section.parens.ond"
+            }
+          },
+          "end": "(?<=\\})",
+          "patterns": [
+            {
+              "include": "#comments"
+            },
+            {
+              "include": "#asm-body"
+            }
+          ]
         }
-      ]
+      ],
+      "endCaptures": {
+        "0": {
+          "name": "punctuation.section.parens.ond"
+        }
+      }
     },
     "asm-parameters": {
       "patterns": [
@@ -437,6 +453,48 @@
         },
         {
           "include": "$self"
+        }
+      ]
+    },
+    "asm-confirmed-header": {
+      "begin": "(?=r(?:1[0-5]|[0-9])\\b(?:\\s|/\\*(?:[^*]|\\*(?!/))*\\*/)*(?:<->|<-|->))",
+      "end": "(?<=\\})|(?=\\S)(?!\\{|r(?:1[0-5]|[0-9])\\b(?:\\s|/\\*(?:[^*]|\\*(?!/))*\\*/)*(?:<->|<-|->)|/\\*|//)",
+      "patterns": [
+        {
+          "name": "meta.asm.bindings.ond",
+          "begin": "(?=r(?:1[0-5]|[0-9])\\b(?:\\s|/\\*(?:[^*]|\\*(?!/))*\\*/)*(?:<->|<-|->))",
+          "end": "\\)",
+          "endCaptures": {
+            "0": {
+              "name": "punctuation.section.parens.ond"
+            }
+          },
+          "patterns": [
+            {
+              "include": "#asm-parameters"
+            }
+          ]
+        },
+        {
+          "include": "#comments"
+        },
+        {
+          "include": "#asm-body"
+        }
+      ]
+    },
+    "asm-statement": {
+      "begin": "(?:^|(?<=[;{]))[ \\t]*(?=asm\\b|/\\*|//)",
+      "end": "(?<=\\})|(?<=\\))|(?=\\S)(?!asm\\b|/\\*|//)",
+      "patterns": [
+        {
+          "include": "#comments"
+        },
+        {
+          "include": "#asm-block"
+        },
+        {
+          "include": "#asm-provisional"
         }
       ]
     }
