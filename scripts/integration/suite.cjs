@@ -52,10 +52,19 @@ exports.run = async () => {
         const items=await vscode.commands.executeCommand('vscode.executeDocumentSymbolProvider',compatUri);
         const flatten=nodes=>(nodes||[]).flatMap(item=>[item,...flatten(item.children)]);
         const names=flatten(items).map(item=>item.name);
-        return names.includes('interface')&&names.includes('UseImports')?names:null;
+        return names.includes('interface')&&names.includes('asm')&&names.includes('UseImports')?names:null;
       },'develop compatibility symbols');
       await until(()=>vscode.languages.getDiagnostics(compatUri).filter(d=>d.severity===0).length===0,'develop compatibility diagnostics');
       record('develop_compatibility_source',{symbols:compatSymbols,errors:0});
+      const asmText=compatDoc.getText();
+      const asmOffset=asmText.indexOf('r1 <- value')+'r1 <- '.length;
+      const asmCompletions=await until(async()=>{
+        const result=await vscode.commands.executeCommand('vscode.executeCompletionItemProvider',compatUri,compatDoc.positionAt(asmOffset));
+        const labels=result?.items.map(i=>typeof i.label==='string'?i.label:i.label.label)||[];
+        return labels.includes('value')?labels:null;
+      },'inline assembly input expression completion');
+      record('asm_header_uses_ond_completion',asmCompletions.includes('value'));
+      assert.equal(vscode.languages.getDiagnostics(compatUri).filter(d=>d.severity===0).length,0,'asm() ordinary function and inline assembly header should parse');
       const compatText=compatDoc.getText();
       const completionOffset=compatText.indexOf('math.Add')+'math.'.length;
       const importedCompletions=await until(async()=>{
@@ -104,19 +113,45 @@ exports.run = async () => {
       } finally {
         if(compatDoc.getText()!==compatText)await editCompat(compatText);
       }
-      const mainCandidates=await vscode.commands.executeCommand('vscode.executeCompletionItemProvider',uri,new vscode.Position(original.split('\n').findIndex(l=>l.includes('var answer')),4));
-      const mainLabels=mainCandidates?.items.map(i=>typeof i.label==='string'?i.label:i.label.label)||[];
-      for(const hidden of ['TestOnlyHelper','TestOnlyType','TestOnlyValue','SuffixOnlyHelper'])assert(!mainLabels.includes(hidden),`test-only declaration leaked into main.ond completion: ${hidden}`);
-      record('completion_test_sources_hidden',true);
+      const mainLabels=await until(async()=>{
+        const result=await vscode.commands.executeCommand('vscode.executeCompletionItemProvider',uri,new vscode.Position(original.split('\n').findIndex(l=>l.includes('var answer')),4));
+        const labels=result?.items.map(i=>typeof i.label==='string'?i.label:i.label.label)||[];
+        return ['TestOnlyHelper','TestOnlyType','TestOnlyValue','SuffixOnlyHelper'].every(name=>labels.includes(name))?labels:null;
+      },'ordinary source completion includes test-named files');
+      for(const expected of ['TestOnlyHelper','TestOnlyType','TestOnlyValue','SuffixOnlyHelper'])assert(mainLabels.includes(expected),`ordinary source completion missing ${expected}`);
+      record('completion_all_source_files_visible',true);
       const testUri=vscode.Uri.file(path.join(root,'project/test.ond'));
       const testDoc=await vscode.workspace.openTextDocument(testUri);
       await vscode.window.showTextDocument(testDoc);
       const testSource=testDoc.getText(),testLine=testSource.split('\n').findIndex(l=>l.includes('TestOnlyHelper() }'));
       const testColumn=testSource.split('\n')[testLine].indexOf('TestOnlyHelper');
-      const testCompletions=await vscode.commands.executeCommand('vscode.executeCompletionItemProvider',testUri,new vscode.Position(testLine,testColumn));
-      const testLabels=testCompletions?.items.map(i=>typeof i.label==='string'?i.label:i.label.label)||[];
-      for(const expected of ['sumTo','TestOnlyHelper','TestOnlyType','TestOnlyValue','SuffixOnlyHelper'])assert(testLabels.includes(expected),`test.ond completion missing ${expected}`);
-      record('completion_test_sources_visible',true);
+      const testLabels=await until(async()=>{
+        const result=await vscode.commands.executeCommand('vscode.executeCompletionItemProvider',testUri,new vscode.Position(testLine,testColumn));
+        const labels=result?.items.map(i=>typeof i.label==='string'?i.label:i.label.label)||[];
+        return ['sumTo','TestOnlyHelper','TestOnlyType','TestOnlyValue','SuffixOnlyHelper'].every(name=>labels.includes(name))?labels:null;
+      },'test-named source completion');
+      for(const expected of ['sumTo','TestOnlyHelper','TestOnlyType','TestOnlyValue','SuffixOnlyHelper'])assert(testLabels.includes(expected),`source completion missing ${expected}`);
+      record('completion_test_named_source',true);
+      const rolesUri=vscode.Uri.file(path.join(root,'project/roles.ond'));
+      const rolesDoc=await vscode.workspace.openTextDocument(rolesUri);
+      await vscode.window.showTextDocument(rolesDoc);
+      const roleText=rolesDoc.getText();
+      const completionLabels=async(offset,label,required)=>await until(async()=>{
+        const result=await vscode.commands.executeCommand('vscode.executeCompletionItemProvider',rolesUri,rolesDoc.positionAt(offset));
+        const labels=result?.items.map(i=>typeof i.label==='string'?i.label:i.label.label)||[];
+        return required.every(item=>labels.includes(item))?labels:null;
+      },label);
+      const debugOffset=roleText.indexOf('        \n')+'        '.length;
+      const debugLabels=await completionLabels(debugOffset,'Debug role-context completion',['CommonCandidate','DebugCandidate']);
+      assert(!debugLabels.includes('ReleaseCandidate'));
+      const releaseStart=roleText.indexOf('role Release');
+      const releaseOffset=roleText.indexOf('        \n',releaseStart)+'        '.length;
+      const releaseLabels=await completionLabels(releaseOffset,'Release role-context completion',['CommonCandidate','ReleaseCandidate']);
+      assert(!releaseLabels.includes('DebugCandidate'));
+      const outsideOffset=roleText.indexOf('    \n')+'    '.length;
+      const outsideLabels=await completionLabels(outsideOffset,'ordinary role-context completion',['CommonCandidate']);
+      assert(!outsideLabels.includes('DebugCandidate')&&!outsideLabels.includes('ReleaseCandidate'));
+      record('role_context_completions',{outside:['CommonCandidate'],debug:['CommonCandidate','DebugCandidate'],release:['CommonCandidate','ReleaseCandidate']});
     }
     const hover=await vscode.commands.executeCommand('vscode.executeHoverProvider',uri,new vscode.Position(line,column+1));
     assert(hover?.length);record('hover',hover.length);

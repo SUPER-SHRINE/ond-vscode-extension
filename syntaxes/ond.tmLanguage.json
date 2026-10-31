@@ -3,7 +3,16 @@
   "scopeName": "source.ond",
   "patterns": [
     {
+      "include": "#asm-statement"
+    },
+    {
       "include": "#comments"
+    },
+    {
+      "include": "#function-declarations"
+    },
+    {
+      "include": "#role-block"
     },
     {
       "include": "#strings"
@@ -110,6 +119,121 @@
         }
       ]
     },
+    "role-block": {
+      "name": "meta.role.ond",
+      "begin": "(\\brole\\b)(?=(?:\\s|/\\*(?:[^*]|\\*(?!/))*\\*/)+(?:(?!(?:package|import|const|var|type|func|struct|return|defer|break|continue|if|else|for|true|false|nil|as|new)(?![\\p{L}\\p{Nd}_]))[\\p{L}_]|/\\*(?:(?!\\*/).)*$|//.*$))",
+      "beginCaptures": {
+        "0": {
+          "name": "meta.role.header.ond"
+        },
+        "1": {
+          "name": "keyword.other.ond"
+        }
+      },
+      "end": "(?<=\\})|(?=(?:package|import|const|var|type|func|struct|return|defer|break|continue|if|else|for|true|false|nil|as|new)(?![\\p{L}\\p{Nd}_]))",
+      "patterns": [
+        {
+          "include": "#comments"
+        },
+        {
+          "include": "#ond-block"
+        },
+        {
+          "name": "entity.name.type.ond",
+          "match": "[\\p{L}_][\\p{L}\\p{Nd}_]*"
+        },
+        {
+          "name": "punctuation.separator.ond",
+          "match": ","
+        }
+      ]
+    },
+    "ond-block": {
+      "name": "meta.block.ond",
+      "begin": "\\{",
+      "end": "\\}",
+      "patterns": [
+        {
+          "include": "#ond-block"
+        },
+        {
+          "include": "$self"
+        }
+      ]
+    },
+    "asm-block": {
+      "begin": "\\basm\\b(?=(?:\\s|/\\*(?:[^*]|\\*(?!/))*\\*/)*(?:noreturn\\b|\\{|\\((?:\\s|/\\*(?:[^*]|\\*(?!/))*\\*/)*(?:r(?:1[0-5]|[0-9])\\b(?:\\s|/\\*(?:[^*]|\\*(?!/))*\\*/)*(?:<->|<-|->)|\\)(?:\\s|/\\*(?:[^*]|\\*(?!/))*\\*/)*\\{)|/\\*(?:(?!\\*/).)*$|//.*$))",
+      "beginCaptures": {
+        "0": {
+          "name": "keyword.other.ond"
+        }
+      },
+      "end": "(?<=\\})|(?=\\S)(?!noreturn\\b|\\(|\\{|/\\*|//)",
+      "patterns": [
+        {
+          "include": "#comments"
+        },
+        {
+          "name": "keyword.other.ond",
+          "match": "\\bnoreturn\\b"
+        },
+        {
+          "name": "meta.asm.bindings.ond",
+          "begin": "\\(",
+          "end": "\\)",
+          "patterns": [
+            {
+              "include": "#asm-parameters"
+            }
+          ]
+        },
+        {
+          "include": "#asm-body"
+        }
+      ]
+    },
+    "asm-binding-nested": {
+      "name": "meta.group.ond",
+      "begin": "\\(",
+      "end": "\\)",
+      "patterns": [
+        {
+          "include": "#comments"
+        },
+        {
+          "include": "#asm-binding-nested"
+        },
+        {
+          "include": "$self"
+        }
+      ]
+    },
+    "asm-body": {
+      "name": "meta.asm.body.ond",
+      "begin": "\\{",
+      "end": "\\}",
+      "patterns": [
+        {
+          "include": "#comments"
+        },
+        {
+          "name": "entity.name.function.declaration.ond",
+          "match": "(?<![\\p{L}\\p{Nd}_])[\\p{L}_][\\p{L}\\p{Nd}_]*(?=\\s*:)"
+        },
+        {
+          "name": "variable.other.readwrite.ond",
+          "match": "\\br(?:1[0-5]|[0-9])\\b"
+        },
+        {
+          "name": "keyword.other.ond",
+          "match": "\\b(?:ADD|NAND|SHIFT|MUL|LDB|LDH|LDW|STB|STH|STW|CMP|JZ)\\b"
+        },
+        {
+          "name": "constant.numeric.integer.ond",
+          "match": "(?<![A-Za-z0-9_])(?:0[xX](?:_?[0-9A-Fa-f])+|0[bB](?:_?[01])+|0[oO](?:_?[0-7])+|0(?:_?[0-7])*|[1-9](?:_?[0-9])*)(?![A-Za-z0-9_])"
+        }
+      ]
+    },
     "declarations": {
       "patterns": [
         {
@@ -165,10 +289,6 @@
           }
         },
         {
-          "name": "entity.name.function.declaration.ond",
-          "match": "(?<=\\bfunc\\s)([A-Za-z_][A-Za-z0-9_]*)"
-        },
-        {
           "name": "entity.name.function.method.ond",
           "match": "(?<=\\.)[A-Za-z_][A-Za-z0-9_]*(?=\\s*(?:\\[[^\\]\\r\\n]*\\]\\s*)?\\()"
         },
@@ -211,6 +331,170 @@
         {
           "name": "punctuation.separator.ond",
           "match": "[:,;]"
+        }
+      ]
+    },
+    "function-declarations": {
+      "patterns": [
+        {
+          "name": "entity.name.function.declaration.ond",
+          "match": "(?<=\\bfunc\\s)([A-Za-z_][A-Za-z0-9_]*)"
+        }
+      ]
+    },
+    "asm-provisional": {
+      "begin": "(\\basm\\b)((?:\\s|/\\*(?:[^*]|\\*(?!/))*\\*/)*)(\\()",
+      "beginCaptures": {
+        "1": {
+          "name": "entity.name.function.call.ond"
+        },
+        "2": {
+          "patterns": [
+            {
+              "include": "#comments"
+            }
+          ]
+        },
+        "3": {
+          "name": "punctuation.section.parens.ond"
+        }
+      },
+      "end": "\\)(?!(?:\\s|/\\*(?:[^*]|\\*(?!/))*\\*/)*\\{)|(?<=\\})|(?=\\S)(?!r(?:1[0-5]|[0-9])\\b(?:\\s|/\\*(?:[^*]|\\*(?!/))*\\*/)*(?:<->|<-|->)|\\)(?:\\s|/\\*(?:[^*]|\\*(?!/))*\\*/)*\\{|/\\*|//)",
+      "patterns": [
+        {
+          "include": "#comments"
+        },
+        {
+          "include": "#asm-confirmed-header"
+        },
+        {
+          "begin": "\\)(?=(?:\\s|/\\*(?:[^*]|\\*(?!/))*\\*/)*\\{)",
+          "beginCaptures": {
+            "0": {
+              "name": "punctuation.section.parens.ond"
+            }
+          },
+          "end": "(?<=\\})",
+          "patterns": [
+            {
+              "include": "#comments"
+            },
+            {
+              "include": "#asm-body"
+            }
+          ]
+        }
+      ],
+      "endCaptures": {
+        "0": {
+          "name": "punctuation.section.parens.ond"
+        }
+      }
+    },
+    "asm-parameters": {
+      "patterns": [
+        {
+          "include": "#comments"
+        },
+        {
+          "include": "#asm-binding"
+        },
+        {
+          "begin": "(?=\\S)(?![,)]|/\\*|//)",
+          "end": ",|(?=\\))",
+          "endCaptures": {
+            "0": {
+              "name": "punctuation.separator.ond"
+            }
+          },
+          "patterns": [
+            {
+              "include": "#comments"
+            },
+            {
+              "include": "#asm-binding-nested"
+            },
+            {
+              "include": "$self"
+            }
+          ]
+        }
+      ]
+    },
+    "asm-binding": {
+      "begin": "(r(?:1[0-5]|[0-9])\\b)((?:\\s|/\\*(?:[^*]|\\*(?!/))*\\*/)*)(<->|<-|->)",
+      "beginCaptures": {
+        "1": {
+          "name": "variable.other.readwrite.ond"
+        },
+        "2": {
+          "patterns": [
+            {
+              "include": "#comments"
+            }
+          ]
+        },
+        "3": {
+          "name": "keyword.operator.ond"
+        }
+      },
+      "end": ",|(?=\\))",
+      "endCaptures": {
+        "0": {
+          "name": "punctuation.separator.ond"
+        }
+      },
+      "patterns": [
+        {
+          "include": "#comments"
+        },
+        {
+          "include": "#asm-binding-nested"
+        },
+        {
+          "include": "$self"
+        }
+      ]
+    },
+    "asm-confirmed-header": {
+      "begin": "(?=r(?:1[0-5]|[0-9])\\b(?:\\s|/\\*(?:[^*]|\\*(?!/))*\\*/)*(?:<->|<-|->))",
+      "end": "(?<=\\})|(?=\\S)(?!\\{|r(?:1[0-5]|[0-9])\\b(?:\\s|/\\*(?:[^*]|\\*(?!/))*\\*/)*(?:<->|<-|->)|/\\*|//)",
+      "patterns": [
+        {
+          "name": "meta.asm.bindings.ond",
+          "begin": "(?=r(?:1[0-5]|[0-9])\\b(?:\\s|/\\*(?:[^*]|\\*(?!/))*\\*/)*(?:<->|<-|->))",
+          "end": "\\)",
+          "endCaptures": {
+            "0": {
+              "name": "punctuation.section.parens.ond"
+            }
+          },
+          "patterns": [
+            {
+              "include": "#asm-parameters"
+            }
+          ]
+        },
+        {
+          "include": "#comments"
+        },
+        {
+          "include": "#asm-body"
+        }
+      ]
+    },
+    "asm-statement": {
+      "begin": "(?:^|(?<=[;{]))[ \\t]*(?=asm\\b|/\\*|//)",
+      "end": "(?<=\\})|(?<=\\))|(?=\\S)(?!asm\\b|/\\*|//)",
+      "patterns": [
+        {
+          "include": "#comments"
+        },
+        {
+          "include": "#asm-block"
+        },
+        {
+          "include": "#asm-provisional"
         }
       ]
     }

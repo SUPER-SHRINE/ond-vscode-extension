@@ -43,7 +43,7 @@ npm run check
 
 未公開Ond sourceの確認では`npm run test:ond-source -- <Ond checkout> <commit SHA> <version>`を使用できます。\
 Ond developの言語変更を確認するときは、対象commitのSHAとbuild versionを指定してください。\
-この確認では`interface`識別子、`[project].name`、project名を含むimport path、およびlibrary root importを検査します。\
+この確認では通常の`interface`識別子、廃止されたinterface型構文、inline assembly、role文脈の補完、`[project].name`、project名を含むimport path、およびlibrary root importを検査します。\
 依存packageは`ond.toml`の`[dependencies]`へ登録し、importには依存先のproject名を使います。\
 Ond developでは`OND_PATH`環境変数と`--library-dir` optionによる依存指定を使いません。\
 正式配布用lockはOnd 0.3.0を固定しており、project名を含むimport path、`[dependencies]`による依存指定、interface型から具体型またはfunction pointerへの移行を含みます。\
