@@ -2,6 +2,21 @@
 
 この文書では、Ond VS Code Extensionの利用者向け変更を記録します。
 
+## 0.4.0
+
+### 変更
+
+- `asm`／`asm noreturn`を構文色分けとrole文脈の補完に対応
+- 通常の名前として使う`asm`とrole変数の色分けを修正
+- 整数リテラルの基数接頭辞と桁区切りの色分けを修正
+- test file表示の特別扱いを取り除き、通常のOnd sourceとして扱うよう修正
+- Ond 0.4.0 sourceとの互換確認を追加
+
+### 採用状態
+
+正式配布用lockはOnd 0.3.0を固定しています。Ond 0.4.0のsource互換確認は正式な同梱採用を意味しません。\
+Ond 0.4.0のGitHub Release、更新した正式lock、およびWindows/Linux両hostでの配布検証が完了するまで、正式同梱はOnd 0.3.0です。
+
 ## 0.3.0
 
 ### 変更
