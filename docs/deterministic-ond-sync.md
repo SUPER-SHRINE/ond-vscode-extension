@@ -15,8 +15,11 @@ node scripts/ond-sync/cli.mjs resolve --tag 0.1.3 --base-sha <develop SHA> --out
 node scripts/ond-sync/cli.mjs plan --input snapshot.json --out plan.json
 ```
 
-resolverはrepository ID、stable published release、tagのpeeled commit、main包含、全asset ID/size/digest、
-checksum、archive内のbinary、producer manifestを照合します。latestや現在時刻から版を選びません。
+resolverはrepository ID、stable published release、tagのpeeled commit、main包含、採用するassetのID/size/digest、
+checksum、archive内のbinary、producer manifestを照合します。latestや現在時刻から版を選びません。\
+Ond 0.4.0以降のReleaseでは、5個のLSP入力assetに加えて`ond-<version>-windows-x86_64-setup.exe`と同名の`.sha256`の完備pairを許容します。\
+installerは拡張で使用せず、取得・lock・証拠入力の対象に含めません。\
+必須assetの欠損、未知asset、重複名、installer pairの片側だけの追加は拒否します。
 snapshotは読込むbase fileの全bytes/mode、Git tree全entry、candidate証拠assetの全bytes、
 固定planner配布物・schema・policyの全bytes、Node22 executable/version/digestを含みます。token/API全文は含みません。
 

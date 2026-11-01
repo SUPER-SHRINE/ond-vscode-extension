@@ -265,6 +265,54 @@ test("asm comparisons in member and expression calls do not create assembly stat
     }
 });
 
+test("terminated standalone asm comparison calls stay ordinary", () => {
+    // The specification recognizes asm only when a block follows the bindings.
+    // A statement semicolon or enclosing block close before that block resolves
+    // even nested arguments as ordinary expressions. Newlines remain ambiguous.
+    check([
+        "func asm(value: bool) {}",
+        "func f() { var r1: i32 = 1; var rhs: i32 = 2; asm(r1<-rhs); }",
+    ], [[1, "asm", call], [1, "r1<-rhs", null]]);
+    check([
+        "func asm(value: bool) {}",
+        "func f() { var r1: i32 = 1; var rhs: i32 = 2; asm(r1<-rhs) }",
+    ], [[1, "asm", call], [1, "r1<-rhs", null]]);
+    for (const args of [
+        "r1<-rhs", "r1 < -rhs", "r1<-choose(rhs, nested(1))",
+        "/* comparison */ r1 /* operator */ <-rhs", "r1<-rhs /* } ; */",
+        'r1<-len("};")', "r1<-len(`};`)",
+    ]) {
+        check(`func f() { asm(${args}) }`, [[0, "asm", call], [0, "r1", null]]);
+        for (const prefix of ["", "func f() { ", "func f() { /* statement */ "]) {
+            const source = `${prefix}asm(${args});`;
+            const states = [];
+            tokenize([source], grammar, states);
+            assert.equal(states.at(-1), 1, "ordinary call left an open grammar frame: " + source);
+            check([source, "{ var ADD: u32 = sizeof(u32) }"], [
+                [0, "asm", call], [0, "r1", null],
+                [1, "ADD", null], [1, "sizeof", "support.function.builtin.ond"],
+            ]);
+        }
+    }
+    for (const source of [
+        ["asm(", " r1<-choose(rhs, nested(1)));"],
+        ["asm /* spanning", " */ (r1<-rhs);"],
+    ]) {
+        const states = [];
+        tokenize(source, grammar, states);
+        assert.equal(states.at(-1), 1, "ordinary call left an open grammar frame: " + source);
+        check([...source, "{ var ADD: u32 = sizeof(u32) }"], [
+            [1, "r1", null], [2, "ADD", null], [2, "sizeof", "support.function.builtin.ond"],
+        ]);
+    }
+    check("asm(r1 <- choose(rhs, nested(1))) { ADD r2,r1,r0,0 };", [
+        [0, "asm", keyword], [0, "r1", register], [0, "ADD", keyword],
+    ]);
+    check('asm(r1 <- len("};") /* ; */) { ADD r2,r1,r0,0 };', [
+        [0, "asm", keyword], [0, "r1", register], [0, "ADD", keyword],
+    ]);
+});
+
 test("statement comments preserve asm promotion without opening expression contexts", () => {
     for (const source of [
         ["func f() { /* comment */ asm(r1 <- value) { ADD r2,r1,r0,0 } }"],
