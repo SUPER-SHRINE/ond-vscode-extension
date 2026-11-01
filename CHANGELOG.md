@@ -13,11 +13,6 @@
 - Ond 0.4.0を正式採用し、commit `a40d63fd79219e8a4eee1be88821b6ac8fdc9e6f`とlock SHA-256 `6f0669abca73ec5337d39f892fdbe1d2f6ba984964b17436d620f761c78fbab8`を固定
 - 正式同梱のOnd 0.4.0でassembly、role文脈、test名を含むfile、importとinterfaceの互換性を検査
 
-### 採用状態
-
-正式配布用lockは公開済みのOnd 0.4.0 Releaseを固定しています。\
-公開前にWindows/Linux両hostで配布検証を完了する必要があります。
-
 ## 0.3.0
 
 ### 変更
