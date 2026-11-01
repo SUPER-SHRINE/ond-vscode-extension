@@ -10,12 +10,13 @@
 - 通常の名前として使う`asm`とrole変数の色分けを修正
 - 整数リテラルの基数接頭辞と桁区切りの色分けを修正
 - test file表示の特別扱いを取り除き、通常のOnd sourceとして扱うよう修正
-- Ond 0.4.0 sourceとの互換確認を追加
+- Ond 0.4.0を正式採用し、commit `a40d63fd79219e8a4eee1be88821b6ac8fdc9e6f`とlock SHA-256 `6f0669abca73ec5337d39f892fdbe1d2f6ba984964b17436d620f761c78fbab8`を固定
+- 正式同梱のOnd 0.4.0でassembly、role文脈、test名を含むfile、importとinterfaceの互換性を検査
 
 ### 採用状態
 
-正式配布用lockはOnd 0.3.0を固定しています。Ond 0.4.0のsource互換確認は正式な同梱採用を意味しません。\
-Ond 0.4.0のGitHub Release、更新した正式lock、およびWindows/Linux両hostでの配布検証が完了するまで、正式同梱はOnd 0.3.0です。
+正式配布用lockは公開済みのOnd 0.4.0 Releaseを固定しています。\
+公開前にWindows/Linux両hostで配布検証を完了する必要があります。
 
 ## 0.3.0
 
