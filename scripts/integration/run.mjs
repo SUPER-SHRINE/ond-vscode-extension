@@ -10,6 +10,7 @@ import { verifyServer } from "../ond-sync/server.mjs";
 import { OND_NOTICE_FILES,requiresNotices } from "../ond-sync/archive.mjs";
 import { testPolicy } from "../ond-sync/test-policy.mjs";
 import { getPlatform } from "../platform.mjs";
+import { supportsCompatibility } from "./compatibility.cjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, "../..");
@@ -50,17 +51,18 @@ writeFileSync(join(userData, "User/settings.json"), JSON.stringify({
 }));
 writeFileSync(join(project, "ond.toml"), '[project]\nname = "hostapp"\n');
 writeFileSync(join(project, "main.ond"), readFileSync(join(here, "hello.ond")));
-if(localSourceLane) {
+if(supportsCompatibility(metadata.version)) {
     const library = join(resultRoot, "library");
     mkdirSync(join(project, "math"), { recursive: true });
     mkdirSync(library);
-    writeFileSync(join(project, "ond.toml"), '[project]\nname = "hostapp"\n\n[dependencies]\nlocal_library = { path = "../library" }\n');
+    writeFileSync(join(project, "ond.toml"), '[project]\nname = "hostapp"\n\n[roles]\nnames = ["Debug", "Release"]\n\n[dependencies]\nlocal_library = { path = "../library" }\n');
     writeFileSync(join(project, "math", "math.ond"), "package math\nfunc Add(left: u32, right: u32) -> u32 { return left + right }\n");
     writeFileSync(join(library, "ond.toml"), '[project]\nname = "shared"\n');
     writeFileSync(join(library, "shared.ond"), "package shared\nfunc SharedFunction() -> u32 { return 1 }\n");
-    writeFileSync(join(project, "compatibility.ond"), 'package main\nimport "hostapp/math"\nimport "shared"\nfunc interface() {}\nfunc UseImports() { _ = math.Add(1 as u32, 2 as u32); _ = shared.SharedFunction() }\n');
+    writeFileSync(join(project, "compatibility.ond"), 'package main\nimport "hostapp/math"\nimport "shared"\nfunc interface() {}\nfunc asm() -> u32 { return 1 as u32 }\nfunc UseImports(value: u32) { _ = math.Add(1 as u32, 2 as u32); _ = shared.SharedFunction(); _ = asm(); asm (r1 <- value) { ADD r2, r1, r0, 0 } }\n');
     writeFileSync(join(project, "test.ond"), "package main\nfunc TestOnlyHelper() {}\ntype TestOnlyType struct { TestOnlyField: u32 }\nvar TestOnlyValue: TestOnlyType\nfunc (value: TestOnlyType) testOnlyMethod() {}\nfunc TestCompletion() { TestOnlyHelper() }\n");
     writeFileSync(join(project, "helpers_test.ond"), "package main\nfunc SuffixOnlyHelper() {}\n");
+    writeFileSync(join(project, "roles.ond"), 'package main\nfunc CommonCandidate() {}\nfunc Outside() {\n    \n}\nrole Debug {\n    func DebugCandidate() {}\n    func InDebug() {\n        \n    }\n}\nrole Release {\n    func ReleaseCandidate() {}\n    func InRelease() {\n        \n    }\n}\n');
 }
 
 let editor;
@@ -163,6 +165,7 @@ for (const run of [1, 2]) {
         "--new-window", project], `editor-${run}`, {
         OND_TEST_ROOT: resultRoot, OND_HOST_RUN: String(run),
         OND_EXPECTED_LSP_SHA256: metadata.sha256, OND_EXPECTED_EXTENSION_VERSION: manifest.version,
+        OND_EXPECTED_LSP_VERSION: metadata.version,
         OND_EXPECTED_VSCODE_VERSION: vscodeVersion
     });
     const result = JSON.parse(readFileSync(join(resultRoot, `host-results-${run}.json`), "utf8"));
