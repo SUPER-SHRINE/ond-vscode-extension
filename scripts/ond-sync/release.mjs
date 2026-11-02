@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { extractBinary } from './archive.mjs';
 export { extractBinary } from './archive.mjs';
-import { REPOSITORY,REPOSITORY_ID,TARGETS,canonical,sha256,validateLock,verifyBytes,version,keys } from './contract.mjs';
+import { REPOSITORY,REPOSITORY_ID,TARGETS,canonical,sha256,validateLock,verifyBytes,version,compareVersions,keys } from './contract.mjs';
 export async function releaseFacts(api,tag) {
   version(tag); const repo=await api.call(''); assert.equal(repo.id,REPOSITORY_ID);assert.equal(repo.full_name,REPOSITORY);
   const release=await api.call(`/releases/tags/${tag}`);assert(!release.draft&&!release.prerelease,'Stable published Release required');assert.equal(release.tag_name,tag);assert(release.published_at,'Published Release required');
@@ -12,6 +12,12 @@ export async function releaseFacts(api,tag) {
   return {release,commit:object.sha};
 }
 function findAsset(release,name) { const a=release.assets.filter(a=>a.name===name);assert.equal(a.length,1,`Missing/duplicate asset: ${name}`);return a[0]; }
+function assertAssetSet(release,tag,required) {
+  const actual=release.assets.map(a=>a.name),installer=`ond-${tag}-windows-x86_64-setup.exe`;
+  // 0.4以降のinstallerはLSPの入力に含めず、既知の完備pairだけを追加assetとして許容する。
+  const optional=compareVersions(tag,'0.4.0')>=0&&actual.some(name=>name===installer||name===installer+'.sha256')?[installer,installer+'.sha256']:[];
+  assert.deepEqual(actual.sort(),required.concat(optional).sort(),'Release contract asset set mismatch');
+}
 async function getAsset(api,release,name) {
   const a=findAsset(release,name), bytes=await api.call(`/releases/assets/${a.id}`,{binary:true});
   assert.equal(bytes.length,a.size);const digest=sha256(bytes);if(a.digest)assert.equal(a.digest,`sha256:${digest}`);
@@ -37,14 +43,14 @@ export async function resolveRelease(api,tag) {
     const compact=JSON.stringify(JSON.parse(canonical(expected)))+'\n';assert.equal(m.bytes.toString('utf8'),compact,'Noncanonical producer manifest');
   }
   validateLock(lock);
-  assert.deepEqual(facts.release.assets.map(a=>a.name).sort(),evidence.map(e=>e.name).sort(),'Release contract asset set mismatch');
+  assertAssetSet(facts.release,tag,evidence.map(e=>e.name));
   // resolver途中でrelease/tag/asset metadataが変化していないことも確認。
   await verifyReleaseState(api,lock);
   return {lock,blobs,evidence:evidence.sort((a,b)=>Buffer.compare(Buffer.from(a.name),Buffer.from(b.name)))};
 }
 export async function verifyReleaseState(api,lock) {
   validateLock(lock);const f=await releaseFacts(api,lock.tag);assert.equal(f.commit,lock.commit,'Tag moved');assert.equal(f.release.id,lock.releaseId,'Release replaced');
-  assert.deepEqual(f.release.assets.map(a=>a.name).sort(),lock.targets.flatMap(t=>[t.archive.name,t.checksum.name]).concat(lock.manifest?[lock.manifest.name]:[]).sort(),'Release contract asset set mismatch');
+  assertAssetSet(f.release,lock.tag,lock.targets.flatMap(t=>[t.archive.name,t.checksum.name]).concat(lock.manifest?[lock.manifest.name]:[]));
   for(const a of lock.targets.flatMap(t=>[t.archive,t.checksum]).concat(lock.manifest?[lock.manifest]:[])) {
     const current=findAsset(f.release,a.name);assert.equal(current.state,'uploaded','Asset not uploaded');assert.equal(current.id,a.id,'Asset replaced');assert.equal(current.size,a.size);if(current.digest)assert.equal(current.digest,`sha256:${a.sha256}`);
     verifyBytes(await api.call(`/releases/assets/${a.id}`,{binary:true}),a);

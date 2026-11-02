@@ -10,6 +10,7 @@ import { verifyServer } from "../ond-sync/server.mjs";
 import { OND_NOTICE_FILES,requiresNotices } from "../ond-sync/archive.mjs";
 import { testPolicy } from "../ond-sync/test-policy.mjs";
 import { getPlatform } from "../platform.mjs";
+import { supportsCompatibility } from "./compatibility.cjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, "../..");
@@ -50,7 +51,7 @@ writeFileSync(join(userData, "User/settings.json"), JSON.stringify({
 }));
 writeFileSync(join(project, "ond.toml"), '[project]\nname = "hostapp"\n');
 writeFileSync(join(project, "main.ond"), readFileSync(join(here, "hello.ond")));
-if(localSourceLane) {
+if(supportsCompatibility(metadata.version)) {
     const library = join(resultRoot, "library");
     mkdirSync(join(project, "math"), { recursive: true });
     mkdirSync(library);
@@ -164,6 +165,7 @@ for (const run of [1, 2]) {
         "--new-window", project], `editor-${run}`, {
         OND_TEST_ROOT: resultRoot, OND_HOST_RUN: String(run),
         OND_EXPECTED_LSP_SHA256: metadata.sha256, OND_EXPECTED_EXTENSION_VERSION: manifest.version,
+        OND_EXPECTED_LSP_VERSION: metadata.version,
         OND_EXPECTED_VSCODE_VERSION: vscodeVersion
     });
     const result = JSON.parse(readFileSync(join(resultRoot, `host-results-${run}.json`), "utf8"));

@@ -3,6 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const assert = require('node:assert/strict');
 const { assertExpectedDiagnostic } = require('./diagnostics.cjs');
+const { supportsCompatibility } = require('./compatibility.cjs');
 const root = process.env.OND_TEST_ROOT;
 assert(root, 'OND_TEST_ROOT is required');
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -44,7 +45,7 @@ exports.run = async () => {
     const completions=await vscode.commands.executeCommand('vscode.executeCompletionItemProvider',uri,new vscode.Position(line,column+3));
     const labels=completions?.items.map(i=>typeof i.label==='string'?i.label:i.label.label)||[];
     assert(labels.includes('sumTo'),'sumTo completion missing');record('completion_sumTo',true);
-    if(process.env.OND_TEST_SOURCE_LANE==='local') {
+    if(supportsCompatibility(process.env.OND_EXPECTED_LSP_VERSION)) {
       const compatUri=vscode.Uri.file(path.join(root,'project/compatibility.ond'));
       const compatDoc=await vscode.workspace.openTextDocument(compatUri);
       await vscode.window.showTextDocument(compatDoc);
@@ -53,9 +54,9 @@ exports.run = async () => {
         const flatten=nodes=>(nodes||[]).flatMap(item=>[item,...flatten(item.children)]);
         const names=flatten(items).map(item=>item.name);
         return names.includes('interface')&&names.includes('asm')&&names.includes('UseImports')?names:null;
-      },'develop compatibility symbols');
-      await until(()=>vscode.languages.getDiagnostics(compatUri).filter(d=>d.severity===0).length===0,'develop compatibility diagnostics');
-      record('develop_compatibility_source',{symbols:compatSymbols,errors:0});
+      },'0.4 compatibility symbols');
+      await until(()=>vscode.languages.getDiagnostics(compatUri).filter(d=>d.severity===0).length===0,'0.4 compatibility diagnostics');
+      record('ond_040_compatibility',{symbols:compatSymbols,errors:0});
       const asmText=compatDoc.getText();
       const asmOffset=asmText.indexOf('r1 <- value')+'r1 <- '.length;
       const asmCompletions=await until(async()=>{

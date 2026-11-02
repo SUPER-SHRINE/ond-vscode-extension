@@ -14,6 +14,7 @@ import { resolveRelease,verifyReleaseState,verifyVisibility } from './release.mj
 import { crc32,zipEntries,extractBinary,extractNotices,OND_NOTICE_FILES,requiresNotices } from './archive.mjs';
 import { reconcileAssets,verifyCandidate,waitForPublication } from './publication.mjs';
 import { getPlatform } from '../platform.mjs';
+import { COMPATIBILITY_TESTS } from '../integration/compatibility.cjs';
 import { releaseMetadata,verifyServer,cleanOppositeBinary,checkServerDirectory,checkServerEntries } from './server.mjs';
 import { clone,old,zero,tar,zip,candidate,input,remote } from './fixtures.mjs';
 test('Git checkout preserves canonical lock and hashed input bytes with core.autocrlf=true',()=>{
@@ -76,6 +77,14 @@ test('publication evidence binds the exact VSIX, lock, target, policy and both a
   const modernFiles={...files,'extension/config/ond-release.lock.json':Buffer.from(canonical(modernLock)),'extension/server/ond-lsp.json':Buffer.from(canonical(releaseMetadata(modernLock,target,notices))),'extension/server/THIRD-PARTY-NOTICES.txt':notices['THIRD-PARTY-NOTICES.txt'],'extension/server/COPYRIGHT-library.html':notices['COPYRIGHT-library.html']};
   const modernVsix=zip(modernFiles),modernEvidence={...evidence,vsixSha256:sha256(modernVsix),lockSha256:sha256(canonical(modernLock))},modernArgs={...args,lock:modernLock,vsix:modernVsix,evidence:modernEvidence};assert.equal(verifyCandidate(modernArgs),sha256(modernVsix));
   const missingNotice=zip(Object.fromEntries(Object.entries(modernFiles).filter(([path])=>path!=='extension/server/COPYRIGHT-library.html')));assert.throws(()=>verifyCandidate({...modernArgs,vsix:missingNotice,evidence:{...modernEvidence,vsixSha256:sha256(missingNotice)}}),/Unexpected server files/);
+  const currentLock=clone(modernLock);currentLock.version=currentLock.tag='0.4.0';currentLock.manifest.name='ond-0.4.0-manifest.json';for(const item of currentLock.targets){item.archive.name=item.archive.name.replace('0.1.3','0.4.0');item.checksum.name=item.checksum.name.replace('0.1.3','0.4.0');}
+  const currentVsix=zip({...modernFiles,'extension/config/ond-release.lock.json':Buffer.from(canonical(currentLock)),'extension/server/ond-lsp.json':Buffer.from(canonical(releaseMetadata(currentLock,target,notices)))});
+  const currentEvidence={...modernEvidence,vsixSha256:sha256(currentVsix),lockSha256:sha256(canonical(currentLock)),hostRuns:clone(modernEvidence.hostRuns)};
+  const currentArgs={...modernArgs,lock:currentLock,vsix:currentVsix,evidence:currentEvidence};
+  assert.throws(()=>verifyCandidate(currentArgs),/Incomplete host suite/);
+  for(const run of currentEvidence.hostRuns)run.tests.splice(6,0,...COMPATIBILITY_TESTS.map(name=>({name,value:true})));
+  assert.equal(verifyCandidate(currentArgs),sha256(currentVsix));
+  currentEvidence.hostRuns[0].tests.splice(6,1);assert.throws(()=>verifyCandidate(currentArgs),/Incomplete host suite/);
   const changedNotice=zip({...modernFiles,'extension/server/COPYRIGHT-library.html':Buffer.from('rewritten')});assert.throws(()=>verifyCandidate({...modernArgs,vsix:changedNotice,evidence:{...modernEvidence,vsixSha256:sha256(changedNotice)}}),/provenance differs/);
   for(const change of [a=>a.vsix=Buffer.concat([vsix,Buffer.from('changed')]),a=>a.evidence.hostRuns.pop(),a=>a.evidence.hostRuns[0].tests.pop(),a=>a.evidence.hostRuns[0].success=false,a=>a.evidence.policySha256='0'.repeat(64),a=>a.evidence.binarySha256='0'.repeat(64),a=>a.evidence.target='windows-x86_64',a=>a.extensionCommit=zero]){const mutated=clone(args);mutated.vsix=Buffer.from(mutated.vsix);change(mutated);assert.throws(()=>verifyCandidate(mutated));}
   for(const path of ['extension/server/ond-lsp.exe','extension/server/debug.pdb','extension/server/nested/ond-lsp']) {
@@ -95,6 +104,31 @@ test('resolver requires actual stable release and peels tag; mutations invalidat
   state.release.assets[0].id++;await assert.rejects(verifyReleaseState(api,c.lock),/Asset replaced/);state.release.assets[0].id--;
   const a=state.release.assets[0],original=bytes.get(a.name);bytes.set(a.name,Buffer.alloc(original.length));await assert.rejects(verifyReleaseState(api,c.lock),/checksum mismatch/);bytes.set(a.name,original);
   state.release.draft=true;await assert.rejects(resolveRelease(api,'0.1.2'),/Stable published/);state.release.draft=false;state.release.assets=state.release.assets.filter(a=>a.name!==c.lock.manifest.name);await assert.rejects(resolveRelease(api,'0.1.2'),/Missing\/duplicate asset/);
+});
+
+test('0.4 installer assets are an optional complete pair outside the locked LSP inputs',async()=>{
+  for(const tag of ['0.3.0','0.4.0']) {
+    const c=candidate(tag),descriptors=c.lock.targets.flatMap(t=>[t.archive,t.checksum]).concat(c.lock.manifest);
+    const core=descriptors.map(a=>({...a,state:'uploaded',digest:`sha256:${a.sha256}`})),bytes=new Map(c.evidence.map(e=>[e.name,Buffer.from(e.content,'base64')]));
+    const installer=`ond-${tag}-windows-x86_64-setup.exe`,pair=[{name:installer,id:800},{name:installer+'.sha256',id:801}];
+    let assets=core;
+    const api={call:async path=>{
+      if(path==='')return {id:c.lock.repositoryId,full_name:c.lock.repository};
+      if(path===`/releases/tags/${tag}`)return {id:c.lock.releaseId,tag_name:tag,published_at:'2026-11-01T00:00:00Z',draft:false,prerelease:false,assets};
+      if(path===`/git/ref/tags/${tag}`)return {object:{type:'commit',sha:c.lock.commit}};
+      if(path.startsWith('/compare/'))return {status:'identical'};
+      const asset=assets.find(a=>String(a.id)===path.split('/').at(-1));assert(asset,'Unexpected request');
+      assert(bytes.has(asset.name),'Installer must never be downloaded');return bytes.get(asset.name);
+    }};
+    assert.equal(canonical((await resolveRelease(api,tag)).lock),canonical(c.lock));
+    assets=core.concat(pair);
+    if(tag==='0.3.0') {await assert.rejects(resolveRelease(api,tag),/asset set mismatch/);await assert.rejects(verifyReleaseState(api,c.lock),/asset set mismatch/);continue;}
+    const resolved=await resolveRelease(api,tag);assert.equal(canonical(resolved.lock),canonical(c.lock));assert.equal(resolved.evidence.length,5);
+    await verifyReleaseState(api,c.lock);
+    for(const invalid of [core.concat(pair[0]),core.concat(pair[1]),core.concat(pair,pair[0]),core.concat(pair,{name:'unexpected',id:802}),core.slice(1).concat(pair),core.concat(pair,core[0])]) {
+      assets=invalid;await assert.rejects(resolveRelease(api,tag));await assert.rejects(verifyReleaseState(api,c.lock));
+    }
+  }
 });
 
 test('apply detects branch/base/conflicting PR changes during final release verification',async()=>{
