@@ -44,10 +44,10 @@ npm run check
 未公開Ond sourceの確認では`npm run test:ond-source -- <Ond checkout> <commit SHA> <version>`を使用できます。\
 この確認では指定sourceからLanguage Serverをbuildし、非公開の検証用VSIXへ同梱します。\
 正式配布用lockや公開経路には接続しません。\
-正式lockで採用したOnd 0.4.0とsource確認の両方で、`asm`の式補完、role文脈の補完、test名を含むfileの通常補完、importとinterfaceの互換性を検査します。\
+正式lockで採用したOnd 0.5.0とsource確認の両方で、`asm`の式補完、role文脈の補完、test名を含むfileの通常補完、importとinterfaceの互換性を検査します。\
 依存packageは`ond.toml`の`[dependencies]`へ登録し、importには依存先のproject名を使います。\
 Ond 0.3.0以降では`OND_PATH`環境変数と`--library-dir` optionによる依存指定を使いません。\
-正式配布用lockはOnd 0.4.0のGitHub Release（commit `a40d63fd79219e8a4eee1be88821b6ac8fdc9e6f`）を固定しています。\
+正式配布用lockはOnd 0.5.0のGitHub Release（commit `e93d54a1d9b147cf5516bd9480cc0014648c531e`）を固定しています。\
 公開前にWindows/Linux両hostで配布検証を完了する必要があります。\
 インストール済みVisual Studio Codeを使う場合は、実行前に`OND_LOCAL_VSCODE_EXECUTABLE`へ`Code.exe`の絶対パス、`OND_LOCAL_VSCODE_CLI`へ同じインストール内の`resources/app/out/cli.js`の絶対パスを設定します。\
 この指定は非公開source laneだけで有効です。\

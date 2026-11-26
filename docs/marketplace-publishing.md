@@ -57,7 +57,7 @@ workflowがdefault branchへ入った後、「拡張を公開」を`show-identit
    成功時だけ`.vsix.verified.json`へVSIX/binary/lock/policyのdigestとcommit、host結果を記録する。
 8. environment承認後、publish jobは独立にOnd全assetを再取得・照合し、VSIX内のbinary/metadata/lockと検証証拠を照合する。
    検証済みartifactのbytesを`vsce publish --packagePath`で送り、再buildしない。
-9. `vsce publish`が成功した後、公開Galleryから同じVSIXのbytesを取得できるまで最大5分待つ
+9. `vsce publish`が成功した後、公開Galleryから同じVSIXのbytesを取得できるまで最大20分待つ
    - upload受理とGalleryでの公開確認を分け、確認できたtargetだけを成功とする
    - 両Marketplace target成功後、GitHub Releaseへ同じVSIX・checksum・検証証拠を添付する
 
@@ -66,7 +66,7 @@ Windows/Linuxごとに公開状態とdigestを記録します。既存assetのby
 GitHubのclobberは使用しません。Marketplace既存版もtarget別VSIXを取得して同一性を確認し、
 取得不能・不一致は人の判断が必要なBLOCKEDです。同名versionを自動上書きしません。
 
-uploadが受理されてもGalleryへの反映待ちで5分以内に確認できない場合、最後のGallery照合状態を保存して`VERIFICATION_PENDING`を出し、upload失敗とは扱いません。\
+uploadが受理されてもGalleryへの反映待ちで20分以内に確認できない場合、最後のGallery照合状態を保存して`VERIFICATION_PENDING`を出し、upload失敗とは扱いません。\
 Actionsの`Re-run failed jobs`（`gh run rerun <run-id> --failed`）で同じrunの失敗jobを再実行し、元のbuild artifactを使ってGalleryを照合します。\
 build artifactは7日間保持されるため、その期間内は再buildせず同じVSIXで再開できます。
 

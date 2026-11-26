@@ -59,6 +59,17 @@ test('apply rejects stale base, manual branch, conflicting PR, foreign PR and ch
 test('apply handles 422 concurrent exact branch/PR and stops closed/manual PRs',async()=>{const i=input(),{r,state,p}=remote(i),createBranch=r.createBranch,createPR=r.createPR;r.createBranch=async(...args)=>{await createBranch(...args);throw Object.assign(new Error('race'),{status:422});};r.createPR=async(...args)=>{await createPR(...args);throw Object.assign(new Error('race'),{status:422});};assert.equal((await apply(i,p,r,async()=>{})).state,'PR_OPEN');state.prs[0].state='closed';assert.equal((await apply(i,p,r,async()=>{})).state,'CLOSED');state.prs[0].body='manual';await assert.rejects(apply(i,p,r,async()=>{}),/MANUAL_PR/);});
 test('asset publication reconciles partial success and never replaces differing bytes',async()=>{const files=[{name:'a',bytes:Buffer.from('a')},{name:'b',bytes:Buffer.from('b')}];assert.equal((await reconcileAssets(files,async()=>null)).state,'UNPUBLISHED');assert.equal((await reconcileAssets(files,async name=>name==='a'?Buffer.from('a'):null)).state,'PARTIALLY_PUBLISHED');assert.equal((await reconcileAssets(files,async name=>Buffer.from(name))).state,'PUBLISHED_TARGETS_ALL');await assert.rejects(reconcileAssets(files,async()=>Buffer.from('other')),/replacement forbidden/);});
 test('Marketplace visibility wait accepts delayed exact bytes and stops when visible',async()=>{const file={name:'a',bytes:Buffer.from('a')};let reads=0,elapsed=0;const state=await waitForPublication([file],async()=>++reads<3?null:Buffer.from('a'),{timeoutMs:100,intervalMs:10,now:()=>elapsed,wait:async ms=>{elapsed+=ms;}});assert.equal(state.state,'PUBLISHED_TARGETS_ALL');assert.equal(reads,3);assert.equal(elapsed,20);});
+test('Marketplace visibility wait allows a twelve-minute delay', async () => {
+  const file = {name: 'a', bytes: Buffer.from('a')};
+  const visibleAfterMs = 12 * 60_000;
+  let elapsed = 0;
+  const state = await waitForPublication([file], async () => elapsed < visibleAfterMs ? null : file.bytes, {
+    now: () => elapsed,
+    wait: async ms => { elapsed += ms; },
+  });
+  assert.equal(state.state, 'PUBLISHED_TARGETS_ALL');
+  assert.equal(elapsed, visibleAfterMs);
+});
 test('Marketplace visibility wait returns the last missing state at its deadline',async()=>{const file={name:'a',bytes:Buffer.from('a')};let reads=0,elapsed=0;const state=await waitForPublication([file],async()=>{reads++;return null;},{timeoutMs:25,intervalMs:10,now:()=>elapsed,wait:async ms=>{elapsed+=ms;}});assert.equal(state.state,'UNPUBLISHED');assert.equal(state.assets[0].state,'MISSING');assert.equal(reads,3);assert.equal(elapsed,25);});
 test('Marketplace visibility wait fails on differing bytes without retrying',async()=>{const file={name:'a',bytes:Buffer.from('a')};let reads=0,waits=0;await assert.rejects(waitForPublication([file],async()=>{reads++;return Buffer.from('changed');},{wait:async()=>{waits++;}}),/replacement forbidden/);assert.equal(reads,1);assert.equal(waits,0);});
 test('Marketplace visibility wait does not sleep when exact bytes are already visible',async()=>{let reads=0,waits=0;const state=await waitForPublication([{name:'a',bytes:Buffer.from('a')}],async()=>{reads++;return Buffer.from('a');},{wait:async()=>{waits++;}});assert.equal(state.state,'PUBLISHED_TARGETS_ALL');assert.equal(reads,1);assert.equal(waits,0);});

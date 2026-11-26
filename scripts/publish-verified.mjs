@@ -34,7 +34,7 @@ if(destination==='marketplace'){
   if(state.assets[0].state==='MISSING'){
     const result=spawnSync(process.execPath,[join(ROOT,'node_modules/@vscode/vsce/vsce'),'publish','--azure-credential','--packagePath',join(root,file.name)],{stdio:'inherit',env:{...process.env,OND_RELEASE_TOKEN:'',GH_TOKEN:'',GITHUB_TOKEN:''}});
     if(result.error||result.status!==0)throw new Error('PARTIALLY_PUBLISHED: confirm Marketplace state before retry');
-    const confirmed=await waitForPublication([file],marketplaceBytes);writeFileSync(join(root,`publication-${target}.json`),canonical(confirmed));assert.equal(confirmed.state,'PUBLISHED_TARGETS_ALL','VERIFICATION_PENDING: upload was accepted but Marketplace visibility was not confirmed within five minutes; retry the same artifact');
+    const confirmed=await waitForPublication([file],marketplaceBytes);writeFileSync(join(root,`publication-${target}.json`),canonical(confirmed));assert.equal(confirmed.state,'PUBLISHED_TARGETS_ALL','VERIFICATION_PENDING: upload was accepted but Marketplace visibility was not confirmed before the verification deadline; retry the same artifact');
   }
 }else{
   let release=await api.call(`/releases/tags/${tag}`,{optional:true});
