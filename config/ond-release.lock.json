@@ -1,33 +1,33 @@
 {
-  "commit": "a40d63fd79219e8a4eee1be88821b6ac8fdc9e6f",
+  "commit": "e93d54a1d9b147cf5516bd9480cc0014648c531e",
   "contract": "manifest-v1",
   "manifest": {
-    "id": 698440157,
-    "name": "ond-0.4.0-manifest.json",
-    "sha256": "5565a15b2d97d7b7ccd9ed56306ecf4a37204676d614742829ded7321a84ab47",
+    "id": 794294657,
+    "name": "ond-0.5.0-manifest.json",
+    "sha256": "67e2314784ad2ff4cfcedccefdf98eee6d97c8e6023333eba37209b33e5c17d2",
     "size": 761
   },
-  "releaseId": 430606400,
+  "releaseId": 458949289,
   "repository": "SUPER-SHRINE/ond",
   "repositoryId": 1404563628,
   "schemaVersion": 1,
-  "tag": "0.4.0",
+  "tag": "0.5.0",
   "targets": [
     {
       "archive": {
-        "id": 698439959,
-        "name": "ond-0.4.0-linux-x86_64.tar.gz",
-        "sha256": "06405999da5f6083367843b776d5d4da47edb61b8e9ab131fe50bfdc66fd71fc",
-        "size": 5404281
+        "id": 794294449,
+        "name": "ond-0.5.0-linux-x86_64.tar.gz",
+        "sha256": "2e42e65a4f934cb431c71661dbbbb868e01c7b7f7333c4d229b27faf1e8d670c",
+        "size": 5617510
       },
       "binary": {
         "name": "ond-lsp",
-        "sha256": "9ac1b2acc054c3a5113a31ca9fb200d9410c2f438acac4991f3a75fa3ffdbe0b"
+        "sha256": "a36382bd5d5cbe12b7e66d485048420e6c1c7c15cb31f88882839f111ca3f747"
       },
       "checksum": {
-        "id": 698440015,
-        "name": "ond-0.4.0-linux-x86_64.tar.gz.sha256",
-        "sha256": "8118c03041b29cc294f04c2f26ad35d9af9f8e4db68c729c73d423786e4eebfa",
+        "id": 794294501,
+        "name": "ond-0.5.0-linux-x86_64.tar.gz.sha256",
+        "sha256": "eb2a7a754b8b1ff447b7945065af1e84432a83ac2822d648d5b86a801bc29385",
         "size": 96
       },
       "rustTarget": "x86_64-unknown-linux-gnu",
@@ -35,24 +35,24 @@
     },
     {
       "archive": {
-        "id": 698440055,
-        "name": "ond-0.4.0-windows-x86_64.zip",
-        "sha256": "a977f4c7391fdd859edfa4e628e40c7aec402248382cb11d2924cb85fadb2034",
-        "size": 4915200
+        "id": 794294534,
+        "name": "ond-0.5.0-windows-x86_64.zip",
+        "sha256": "8ffa41ba4d29858c6caa1dfee5e7acae51681bee3988c7af19455386aeb8a563",
+        "size": 5110531
       },
       "binary": {
         "name": "ond-lsp.exe",
-        "sha256": "7b87fa1d946dd1539b28d04fbb808de0a9e291ad1c19f7e9ebe6ad3ec8433313"
+        "sha256": "490cfb6bf148d69146987b958e0f68bfb0e80ff91583a3be4bc91cf7133ae2f9"
       },
       "checksum": {
-        "id": 698440123,
-        "name": "ond-0.4.0-windows-x86_64.zip.sha256",
-        "sha256": "56123b3b3444a16f562be46cc40a47b1253bc4319b3656f1a5b0379c4ffe5ebf",
+        "id": 794294605,
+        "name": "ond-0.5.0-windows-x86_64.zip.sha256",
+        "sha256": "80eca39254f89ee9839eca01d62ea5b0b7fdb998324f4bd451393ff12c569925",
         "size": 96
       },
       "rustTarget": "x86_64-pc-windows-msvc",
       "target": "windows-x86_64"
     }
   ],
-  "version": "0.4.0"
+  "version": "0.5.0"
 }

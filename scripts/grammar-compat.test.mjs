@@ -95,6 +95,25 @@ test("keeps the current declarations and builtin set", () => {
     check("load32(0); store32(0, 1); sizeof(u32)", [[0, "load32", call], [0, "store32", call], [0, "sizeof", "support.function.builtin.ond"]]);
 });
 
+test("highlights the extended builtin numeric types", () => {
+    const added = ["i64", "u64", "f64", "q16", "q32"];
+    check(`var a: i64; var b: u64; var c: f64; var d: q16; var e: q32; func f(x: i64) -> q32 {}`, [
+        ...added.map(word => [0, word, "support.type.builtin.ond"]),
+        [0, "i64", "support.type.builtin.ond", 1],
+        [0, "q32", "support.type.builtin.ond", 1],
+    ]);
+    for (const word of added) {
+        check(`// ${word}`, [[0, word, "!support.type.builtin.ond"]]);
+        check(`/* ${word} */`, [[0, word, "!support.type.builtin.ond"]]);
+        check(`var text: string = "${word}";`, [[0, word, "!support.type.builtin.ond"]]);
+        check(`var text: string = \`${word}\`;`, [[0, word, "!support.type.builtin.ond"]]);
+    }
+    check("var i64Value: u32; var my_q32: u32", [
+        [0, "i64", "!support.type.builtin.ond"],
+        [0, "q32", "!support.type.builtin.ond"],
+    ]);
+});
+
 test("highlights complete integer literals in Ond expressions", () => {
     const valid = ["0xFF", "0Xff", "0b1010", "0B1010", "0o755", "0O755", "0x_FF", "0b_101", "0o_17", "0755", "0_600", "1_000", "0", "42"];
     const source = `func values() { var value: u32 = ${valid.join(" + ")}; }`;
